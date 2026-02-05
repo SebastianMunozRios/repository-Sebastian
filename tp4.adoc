@@ -1,1 +1,56 @@
+= -> Lab 1 (Cookies)
 
+
+#Q1. Pourquoi est-il dangereux de stocker un paramètre comme Admin=false directement dans un cookie, même si l’utilisateur ne peut pas le voir à l’écran ?#
+
+*_reponse:_* Il est dangereux de stocker un paramètre tel que Admin=false dans un cookie,
+car les cookies sont stockés côté client et peuvent être facilement modifiés par l’utilisateur
+à l’aide des outils du navigateur ou d’un proxy (Burp Suite). Même si l’utilisateur ne voit
+pas ce paramètre à l’écran, il peut le falsifier et tromper le serveur. Si le serveur se base uniquement
+sur la valeur du cookie pour accorder des privilèges, cela permet à un attaquant d’obtenir
+un accès administrateur non autorisé.
+
+
+
+
+##Q2. Quelle aurait été la bonne méthode pour gérer les droits administrateur côté serveur (PHP/Base de données) ?
+##
+
+reponse:
+La bonne méthode aurait été de gérer les droits administrateur exclusivement côté serveur en stockant
+le rôle de l’utilisateur dans la base de données. Le cookie ne devrait contenir qu’un identifiant de session,
+utilisé par le serveur pour retrouver l’utilisateur et vérifier ses droits à chaque requête sensible.
+Ainsi, même si un utilisateur modifie ses cookies, le serveur ne lui accorde des
+privilèges administrateur que si la base de données confirme qu’il est réellement administrateur.
+
+
+
+
+
+
+= -> Sur le Lab 2 (Énumération)
+
+##Q3. Dans l’attaque Intruder, quel élément technique précis vous a permis de distinguer le bon login des mauvais (Code HTTP ? Taille en octets ? Temps de réponse ?) ?
+##
+
+
+reponse:
+
+Dans l’attaque Intruder, c’est la "différence de taille des réponses (longueur en octets)"
+qui a permis d’identifier le bon nom d’utilisateur, car la réponse indiquant
+« Incorrect password » était plus longue que celles indiquant "« Invalid username »".
+Ensuite, lors de la force brute du mot de passe, le "code HTTP 302" a permis
+d’identifier la bonne combinaison, car il indiquait une connexion réussie contrairement aux réponses en 200.
+
+
+
+##Q4. Quelle "Bonne Pratique" de développement (vue en cours) permettrait d’empêcher cette attaque ?
+##
+
+reponse:
+
+La bonne pratique de développement permettant d’empêcher cette attaque est
+"l’utilisation de réponses d’erreur uniformes lors de l’authentification",
+en renvoyant le même message, la même taille de réponse et le même code HTTP
+que le nom d’utilisateur ou le mot de passe soit incorrect, afin d’empêcher toute
+énumération des comptes.
