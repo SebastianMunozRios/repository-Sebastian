@@ -1,0 +1,74 @@
+
+
+
+= **Questions de Synthèse (Compte-rendu)**
+
+
+*##Q1(LAB 1). Dans le Lab 1, pourquoi l'ajout de OR 1=1permet-il d'afficher des données qui étaient censées être cachées ? Expliquez la logique booléenne.
+##*
+
+
+
+*reponse:*
+
+_L’ajout de `OR 1=1` fonctionne parce que `1=1` est toujours vrai. La requête originale impose `category = 'Gifts' AND released = 1`, donc seuls les produits publiés sont affichés. En injectant `' OR 1=1--`, la condition devient vraie pour toutes les lignes, et la partie `AND released = 1` est ignorée grâce au commentaire `--`. Le resultad
+; la base retourne tous les produits, même ceux qui étaient censés être cachés._
+
+image::TP1 120226.png[]
+
+
+
+
+
+**
+##Q2(LAB 2). Dans le Lab 2, quel est le rôle précis des caractères --(ou #selon la base de données) à la fin de votre injection ? Pourquoi cela permet-il de se passer du mot de passe ?
+##**
+
+*reponse:*
+
+__Dans le Lab 2, les caractères `--` (ou `#` selon la base de données) servent à commenter le reste de la requête SQL. Tout ce qui suit ces caractères est ignoré par le moteur de base de données.
+__
+_Lorsqu’on injecte `administrator'--`, la requête devient quelque chose comme
+`SELECT * FROM users WHERE username = 'administrator'--' AND password = '...';`_
+
+__La partie contenant la vérification du mot de passe est alors commentée et donc non exécutée. La base de données ne vérifie plus le mot de passe : elle cherche uniquement l’utilisateur `administrator`. Si cet utilisateur existe, l’authentification est acceptée sans avoir besoin du mot de passe.
+__
+
+image::TP2 120226.png[]
+
+**##Q3(LAB 3). Dans le Lab 3 (UNION), pourquoi est-il obligatoire de connaître le nombre exact de colonnes avant de pouvoir extraire des données ? Que se passe-t-il si les deux requêtes n'ont pas la même structure ?
+##
+**
+
+
+*reponse:*
+
+__Dans le Lab 3, il est obligatoire de connaître le nombre exact de colonnes parce qu’une requête `UNION` en SQL impose que les deux requêtes combinées aient le même nombre de colonnes et des types compatibles, dans le même ordre.
+Si la requête injectée ne contient pas exactement le même nombre de colonnes que la requête originale, la base de données renvoie une erreur. Dans ce cas, l’attaque échoue et aucune donnée n’est retournée.
+__
+__Donc, pour pouvoir extraire des données avec `UNION SELECT`, il faut d’abord ajuster la requête injectée afin qu’elle respecte parfaitement la structure de la requête initiale , sinon la base refuse d’exécuter l’union.
+__
+
+
+image::TP3 120226.png[]
+
+
+*##Q4(LAB 4). Quelle est la meilleure méthode de protection (côté code PHP/Java/C#) pour empêcher totalement les injections SQL, rendant les caractères comme 'ou ORinefficaces ?
+##*
+
+*reponse:*
+
+__La meilleure méthode de protection contre les injections SQL est d’utiliser des requêtes préparées avec des paramètres liés. Cette technique sépare strictement le code SQL des données fournies par l’utilisateur. Les entrées sont traitées uniquement comme des valeurs et jamais comme des instructions SQL.
+ Ainsi, même si un utilisateur saisit des caractères spéciaux comme `'` ou des mots-clés comme `OR`, ils seront interprétés comme de simples données et ne pourront pas modifier la structure de la requête.
+__
+
+image::tp4 120226.png[]
+
+*##Q5(LAB 5). Dans une injection SQL "Blind" (Aveugle), l'attaquant ne voit jamais les données s'afficher à l'écran. Comment fait-il alors pour voler un mot de passe entier ? Pourquoi cette technique est-elle beaucoup plus lente qu'une injection UNIONclassique ?
+##*
+
+**reponse:
+**
+
+
+

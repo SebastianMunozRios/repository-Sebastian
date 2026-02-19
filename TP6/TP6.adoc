@@ -1,0 +1,122 @@
+
+
+
+*TP 6
+(Compte-rendu)*
+
+
+_*Questions de Synthèse:*_
+
+
+
+**##Q1. Différence Stored vs Reflected#
+**
+
+*#Quelle est la différence majeure entre le Lab 1 (Reflected) et le Lab 2 (Stored) en termes de dangerosité ? Si vous vouliez piéger un administrateur, quelle méthode serait la plus efficace pour ne pas éveiller les soupçons ?#*
+
+image::TP6 1.png[]
+
+image::TP6 2.png[]
+
+
+reponse:
+
+La différence majeure est que le **Lab 1 (XSS réfléchi)** exécute le script seulement si la victime clique sur un lien piégé , et le **Lab 2 (XSS stocké)** enregistre le script sur le site et l’exécute automatiquement pour chaque visiteur, ce qui le rend beaucoup plus dangereux.
+
+Pour piéger un administrateur sans éveiller les soupçons, la méthode la plus efficace serait le **XSS stocké (Lab 2)**, car le script s’exécute automatiquement lorsqu’il consulte la page, sans qu’il ait besoin de cliquer sur un lien suspect.
+
+
+
+
+
+
+
+
+
+
+
+
+**#Q2. Le contexte d’attribut (Lab 3)#
+**
+
+*##
+Dans le Lab 3, pourquoi l’injection classique <script>alert(1)</script> ne fonctionne-t-elle pas ? Expliquez techniquement ce que fait le navigateur avec les caractères < et >.
+##*
+
+image::TP6 3.png[]
+
+reponse:
+
+Dans le Lab 3 , l’injection classique `<script>alert(1)</script>` ne fonctionne pas parce que les caractères `<` et `>` sont encodés en entités HTML (`&lt;` et `&gt;`).
+
+Le navigateur ne les interprète plus comme des délimiteurs de balises HTML, mais comme du texte simple. Donc au lieu de créer une vraie balise `<script>`, le navigateur affiche littéralement le texte, ce qui empêche l’exécution du JavaScript.
+
+
+**#Q3. Syntaxe JavaScript (Lab 4)#
+**
+
+
+*##Dans le Lab 4, votre payload ressemble à '; alert(1); //. Expliquez précisément le rôle de chaque partie de cette chaîne : * ' : Sert à …​ ; : Sert à …​ // : Sert à …​
+##*
+
+image::TP6 4.png[]
+
+reponse:
+
+
+Dans le Lab 4, le caractère < ' > sert à fermer la chaîne de caractères JavaScript dans laquelle notre entrée est injectée, ce qui permet de sortir du contexte texte. Le point‑virgule < ; > sert ensuite à terminer l’instruction en cours afin d’injecter une nouvelle instruction valide, ici < alert(1); >.  Enfin, < // > sert à commenter le reste du code JavaScript original pour éviter toute erreur de syntaxe après l’injection.
+
+
+
+
+
+
+
+
+*#Q4. DOM XSS (Lab 5)#*
+
+
+*##
+Pourquoi un pare-feu applicatif (WAF) situé sur le serveur a-t-il plus de mal à détecter une faille DOM XSS par rapport à une faille Reflected XSS classique ? (Indice : Où s’exécute le code vulnérable ?)##*
+
+image::TP6 5.png[]
+
+
+reponse:
+
+Un WAF a plus de mal à détecter une "DOM XSS" parce que le code vulnérable s’exécute côte client, dans le navigateur et non côtée serveur.
+
+Dans une "Reflected XSS classique", le script malveillant est renvoyé par le serveur dans la réponse HTTP, ce qui permet au WAF d’analyser et de bloquer la charge utile.
+
+En revanche, dans une "DOM XSS", le serveur renvoie une page légitime, et c’est le "JavaScript du navigateur" (par exemple via `document.write` utilisant `location.search`) qui injecte et exécute le code malveillant. Le WAF ne voit pas directement l’exécution réelle du script, ce qui rend la détection plus difficile.
+
+
+
+
+
+
+
+#*Q5. Remédiation*#
+
+
+
+
+#*#_Si vous étiez développeur, quelle est la règle d’or pour empêcher les failles XSS ?#
+
+#Interdire le mot "script".#
+
+#Encoder (échapper) toutes les données affichées à l’écran (ex: < devient <).#
+
+#Utiliser uniquement des requêtes SQL préparées. Justifiez votre choix._#*#
+
+
+
+
+REPONSE DE REMEDIATION:
+
+La règle d’or serait "Encoder (échapper) toutes les données affichées à l’écran selon leur contexte."
+
+Car une faille XSS apparaît lorsque des données contrôlées par l’utilisateur sont interprétées comme du code (HTML ou JavaScript) par le navigateur. En encodant correctement les caractères spéciaux (ex: `<`, `>`, `"`, `'`) avant affichage, on empêche le navigateur de les interpréter comme des balises/script; ils sont alors traités comme du simple texte.
+
+Interdire le mot “script” ne suffit pas, car il existe de nombreuses autres façons d’injecter du JavaScript. (exemples trouvé: attributs d’événements, SVG, fermeture de chaîne, etc...).
+Les requêtes SQL préparées protègent contre les injections SQL, mais pas contre les XSS, qui s’exécutent dans le navigateur.
