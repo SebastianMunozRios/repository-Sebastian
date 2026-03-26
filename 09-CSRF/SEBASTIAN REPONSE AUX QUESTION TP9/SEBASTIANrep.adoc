@@ -1,0 +1,114 @@
+= Étude de cas (Cas Lama 2023)(reponse)
+
+
+
+#*Question C.3 :*#
+
+*#1) Indiquer pour chacune des deux solutions de protection contre les attaques CSRF proposées par l’environnement de développement CodeIgniter les éléments de sécurisation stockés côté client et ceux stockés côté serveur.#*
+
+reponse:
+
+#SOLUTION 1# - Synchronizer Token Pattern (basée sur la session)
+
+|===
+|Côté client  | Côté serveur
+
+| Le jeton CSRF est transmis dans un champ caché du formulaire HTML (ou dans un paramètre d'URL).
+
+
+| Le jeton CSRF est stocké en variable de session (côté serveur).
+
+|===
+
+
+
+#SOLUTION 2# - Double Submit Cookie Pattern (solution par défaut dans CodeIgniter)
+
+|===
+|Côté client  | Côté serveur
+
+| Le jeton CSRF est stocké sous deux formes côté client : un cookie (envoyé dans les en-têtes HTTP) et un champ caché du formulaire (envoyé dans le corps de la requête)
+
+
+| Rien n'est stocké côté serveur : le serveur se contente de vérifier que les deux valeurs transmises par le client sont identiques
+
+|===
+
+
+
+
+
+
+*##2) Indiquer les modifications à apporter aux classes Security et Filters afin d’activer la protection CSRF basée sur la session (Synchronizer token) et préciser ce que les développeurs des vues devront utiliser dans les formulaires qu’ils veulent protéger.
+##*
+
+reponse:
+
+
+**Classe `Security`** : il faut passer la propriété `$csrfProtection` à la valeur `'session'` pour activer la protection Synchronizer Token à la place du Double Submit Cookie utilisé par défaut.
+
+exemple:
+
+
+```php
+public $csrfProtection = 'session';
+```
+
+**Classe `Filters`** : il faut ajouter le filtre `'csrf'` dans le tableau `$globals`, section `'before'`, pour qu'il soit exécuté avant chaque requête.
+
+exemple:
+
+
+```php
+public $globals = [
+    'before' => ['csrf'],
+];
+```
+
+**Dans les formulaires** : les développeurs devront ajouter la ligne suivante dans chaque formulaire à protéger, afin d'y insérer automatiquement un champ caché contenant le jeton CSRF.
+
+exemple:
+
+
+```php
+<?= csrf_field() ?>
+```
+
+
+
+
+*##Question C.4 :
+##*
+
+
+*##1) nExpliquer pourquoi les routes de l’interface API ne répondent plus depuis la mise en place de la protection contre les attaques CSRF.
+##*
+
+
+reponse:
+
+Depuis l'activation du filtre `'csrf'` dans `$globals`, toutes les requêtes sont interceptées avant d'être traitées.
+
+Le filtre vérifie la présence d'un jeton CSRF valide dans chaque requête. Or, une API est interrogée par des programmes (et non par des navigateurs via des formulaires HTML), donc aucun jeton CSRF n'est transmis dans les requêtes, donc le filtre les rejette automatiquement, ce qui explique l'absence de réponse.
+
+
+
+
+#**2) Indiquer les modifications à apporter à la classe Filters afin de mettre en place une liste blanche en vous aidant du fichier de configuration des routes.
+**#
+
+reponse:
+
+Il faut ajouter une liste blanche pour exclure toutes les routes commençant par `/ws/` du filtre CSRF, grâce à la clé `'except'` et une expression régulière .
+
+exemple:
+
+```php
+public $globals = [
+    'before' => [
+        'csrf' => ['except' => ['ws/*']],
+    ],
+];
+```
+
+Ainsi, toutes les routes de la forme `/ws/...` contournent le filtre CSRF, tandis que les autres routes du site restent protégées.
