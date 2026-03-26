@@ -1,0 +1,82 @@
+= Compte-rendu du TP 6 : Injection XSS (Alkaim Chanfi)
+:imagesdir: imgachanfi
+:icons: font
+:source-highlighter: rouge
+
+[WARNING]
+.Mise en page des captures
+====
+**Note sur la forme :** Tu as regroupé l'intégralité de tes captures d'écran sous la première question. Pour un livrable professionnel ou une copie d'examen, pense bien à ventiler tes preuves d'exécution (captures) sous les titres de chaque challenge (Lab 1, Lab 2, etc.) pour faciliter la lecture de ton correcteur/client !
+====
+
+image::Capture d'écran 2026-02-19 141030.png[Capture Lab 1]
+image::Capture d'écran 2026-02-19 141816.png[Capture Lab 2]
+image::Capture d'écran 2026-02-19 143003.png[Capture Lab 3]
+image::Capture d'écran 2026-02-19 143012.png[Capture Lab 4]
+image::Capture d'écran 2026-02-19 143225.png[Capture Lab 5]
+image::Capture d'écran 2026-02-19 143632.png[Capture Lab 5 suite]
+
+---
+
+== 3.1. Q1. Différence Stored vs Reflected
+
+*Réponse d'Alkaim Chanfi :*
+
+_Différence de dangerosité : La faille Stored (stockée) est plus dangereuse car le script malveillant est enregistré de façon permanente sur le serveur (ex: dans une base de données). Chaque utilisateur qui visite la page est automatiquement infecté._
+
+_Méthode pour l'administrateur : La méthode Stored est la plus efficace. Elle ne nécessite pas d'envoyer un lien suspect à la cible ; il suffit que l'administrateur consulte sa console de gestion habituelle pour que le piège se déclenche._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Parfait.** Le vocabulaire est juste ("permanente", "console de gestion habituelle"). C'est une excellente analyse du vecteur d'attaque et de l'ingénierie sociale associée.#
+
+
+== 3.2. Q2. Le contexte d’attribut (Lab 3)
+
+*Réponse d'Alkaim Chanfi :*
+
+_Pourquoi l'échec : Le script ne fonctionne pas car l'injection se retrouve coincée à l'intérieur d'un attribut HTML (comme value="..."). Le navigateur le traite comme du simple texte et non comme une balise active._
+
+_Rôle des caractères : Le navigateur interprète < et > comme des caractères littéraux (du texte) lorsqu'ils sont dans un attribut. Pour que l'injection marche, il faut d'abord "fermer" l'attribut avec des guillemets avant de pouvoir ouvrir une balise._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Très bien raisonné.** Tu as parfaitement identifié le problème du *contexte d'injection*. Pour être précis à 100% sur la technique : c'est le serveur qui a encodé les chevrons (en entités `\&lt;` et `\&gt;`), forçant ainsi le navigateur à les traiter comme des caractères littéraux inoffensifs.#
+
+
+== 3.3. Q3. Syntaxe JavaScript (Lab 4)
+
+*Réponse d'Alkaim Chanfi :*
+
+_Dans le payload '; alert(1); // :_
+
+_' (Apostrophe) : Sert à fermer la chaîne de caractères existante dans le code JavaScript du site pour en sortir._
+
+_; (Point-virgule) : Sert à terminer l'instruction précédente pour pouvoir en commencer une nouvelle (la nôtre)._
+
+_// (Double slash) : Sert à commenter le reste du code d'origine pour éviter les erreurs de syntaxe qui bloqueraient l'exécution de l'alerte._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Sans faute.** C'est l'explication technique exacte. Sortir du contexte de la chaîne (String Breakout) tout en maintenant la validité syntaxique du reste du script est la clé de ce laboratoire.#
+
+
+== 3.4. Q4. DOM XSS (Lab 5)
+
+*Réponse d'Alkaim Chanfi :*
+_Difficulté du WAF : Un pare-feu (WAF) surveille les données qui arrivent au serveur. Or, dans une faille DOM XSS, le code malveillant est souvent manipulé directement par le navigateur (côté client) via l'URL (après le caractère #)._
+_Exécution : Comme cette partie de l'URL n'est jamais envoyée au serveur, le WAF ne voit passer aucune menace._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Brillant.** Tu as mis le doigt sur la faille structurelle des WAF face aux attaques purement "Client-Side". L'argument du fragment d'URL `#`#
+[green]#qui ne traverse jamais le réseau vers le back-end démontre une vraie maîtrise de l'architecture web.#
+
+
+== 3.5. Q5. Remédiation
+
+*Réponse d'Alkaim Chanfi :*
+_La règle d'or : Encoder (échapper) toutes les données affichées à l'écran._
+
+_Justification : Interdire le mot "script" est inutile car il existe des dizaines d'autres balises (comme \&lt;img\&gt; ou \&lt;body\&gt;).
+
+L'encodage est la seule méthode fiable : elle transforme les caractères spéciaux (comme < en \&lt;) pour que le navigateur les affiche comme du texte inoffensif au lieu de les exécuter comme du code._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Réponse modèle.** Non seulement tu donnes la bonne solution (l'encodage contextuel des sorties), mais tu justifies de manière irréfutable pourquoi la liste noire ("blacklist" de mots comme script) est une mauvaise pratique en sécurité. Excellent travail.#

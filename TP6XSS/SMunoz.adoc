@@ -1,0 +1,78 @@
+= TP 6 (Compte-rendu) : Sebastian Munoz
+:icons: font
+:source-highlighter: rouge
+:imagesdir: imgsmunoz
+
+== Questions de Synthèse :
+
+=== Q1. Différence Stored vs Reflected
+
+*Question : Quelle est la différence majeure entre le Lab 1 (Reflected) et le Lab 2 (Stored) en termes de dangerosité ? Si vous vouliez piéger un administrateur, quelle méthode serait la plus efficace pour ne pas éveiller les soupçons ?*
+
+image::TP6 1.png[Capture Lab 1]
+image::TP6 2.png[Capture Lab 2]
+
+*Réponse de Sebastian Munoz :*
+_La différence majeure est que le **Lab 1 (XSS réfléchi)** exécute le script seulement si la victime clique sur un lien piégé , et le **Lab 2 (XSS stocké)** enregistre le script sur le site et l’exécute automatiquement pour chaque visiteur, ce qui le rend beaucoup plus dangereux._
+_Pour piéger un administrateur sans éveiller les soupçons, la méthode la plus efficace serait le **XSS stocké (Lab 2)**, car le script s’exécute automatiquement lorsqu’il consulte la page, sans qu’il ait besoin de cliquer sur un lien suspect._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Parfait.** L'explication va droit au but. Le vecteur d'attaque de l'ingénierie sociale (ou plutôt l'absence de besoin d'en faire avec le Stored) pour cibler un administrateur est très bien compris.#
+
+
+=== Q2. Le contexte d’attribut (Lab 3)
+
+*Question : Dans le Lab 3, pourquoi l’injection classique \&lt;script\&gt;alert(1)\&lt;/script\&gt; ne fonctionne-t-elle pas ? Expliquez techniquement ce que fait le navigateur avec les caractères \&lt; et \&gt;.*
+
+image::TP6 3.png[Capture Lab 3]
+
+*Réponse de Sebastian Munoz :*
+_Dans le Lab 3 , l’injection classique `\&lt;script\&gt;alert(1)\&lt;/script\&gt;` ne fonctionne pas parce que les caractères `\&lt;` et `\&gt;` sont encodés en entités HTML (`\&amp;lt;` et `\&amp;gt;`)._
+_Le navigateur ne les interprète plus comme des délimiteurs de balises HTML, mais comme du texte simple. Donc au lieu de créer une vraie balise `\&lt;script\&gt;`, le navigateur affiche littéralement le texte, ce qui empêche l’exécution du JavaScript._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Excellent.** L'utilisation du terme "entités HTML" et la description du comportement du navigateur (qui lit et affiche littéralement le texte) démontrent une compréhension technique solide du mécanisme de défense du serveur.#
+
+=== Q3. Syntaxe JavaScript (Lab 4)
+
+*Question : Dans le Lab 4, votre payload ressemble à '; alert(1); //. Expliquez précisément le rôle de chaque partie de cette chaîne...*
+
+image::TP6 4.png[Capture Lab 4]
+
+*Réponse de Sebastian Munoz :*
+_Dans le Lab 4, le caractère ' sert à fermer la chaîne de caractères JavaScript dans laquelle notre entrée est injectée, ce qui permet de sortir du contexte texte. Le point‑virgule ; sert ensuite à terminer l’instruction en cours afin d’injecter une nouvelle instruction valide, ici alert(1); . Enfin, // sert à commenter le reste du code JavaScript original pour éviter toute erreur de syntaxe après l’injection._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Sans faute.** C'est la définition exacte de l'évasion de contexte (String Breakout). Mentionner la nécessité d'éviter "toute erreur de syntaxe" à la fin prouve que tu as bien compris pourquoi l'injection ferait sinon planter le script.#
+
+=== Q4. DOM XSS (Lab 5)
+
+*Question : Pourquoi un pare-feu applicatif (WAF) situé sur le serveur a-t-il plus de mal à détecter une faille DOM XSS par rapport à une faille Reflected XSS classique ?*
+
+image::TP6 5.png[Capture Lab 5]
+
+*Réponse de Sebastian Munoz :*
+_Un WAF a plus de mal à détecter une "DOM XSS" parce que le code vulnérable s’exécute côte client, dans le navigateur et non côtée serveur._
+_Dans une "Reflected XSS classique", le script malveillant est renvoyé par le serveur dans la réponse HTTP, ce qui permet au WAF d’analyser et de bloquer la charge utile._
+_En revanche, dans une "DOM XSS", le serveur renvoie une page légitime, et c’est le "JavaScript du navigateur" (par exemple via `document.write` utilisant `location.search`) qui injecte et exécute le code malveillant. Le WAF ne voit pas directement l’exécution réelle du script, ce qui rend la détection plus difficile._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Brillant.** Tu opposes très bien le flux de données HTTP classique surveillé par le WAF avec le traitement purement local fait par le navigateur. C'est une analyse architecturale d'un bon niveau.#
+
+
+=== Q5. Remédiation
+
+*Question : Si vous étiez développeur, quelle est la règle d’or pour empêcher les failles XSS ?*
+
+*Réponse de Sebastian Munoz :*
+
+_La règle d’or serait "Encoder (échapper) toutes les données affichées à l’écran selon leur contexte."_
+
+_Car une faille XSS apparaît lorsque des données contrôlées par l’utilisateur sont interprétées comme du code (HTML ou JavaScript) par le navigateur. En encodant correctement les caractères spéciaux (ex: `\&lt;`, `\&gt;`, `"`, `'`) avant affichage, on empêche le navigateur de les interpréter comme des balises/script; ils sont alors traités comme du simple texte._
+
+_Interdire le mot “script” ne suffit pas, car il existe de nombreuses autres façons d’injecter du JavaScript. (exemples trouvé: attributs d’événements, SVG, fermeture de chaîne, etc...)._
+
+_Les requêtes SQL préparées protègent contre les injections SQL, mais pas contre les XSS, qui s’exécutent dans le navigateur._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Réponse modèle.** Définir la bonne solution (Output Encoding contextualisé) tout en démontant point par point pourquoi les autres options sont mauvaises ou inadaptées est la meilleure façon de justifier un choix technique. C'est un sans-faute.#

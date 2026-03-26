@@ -1,0 +1,70 @@
+= Fiche de Révision : Vocabulaire Technique Avancé (XSS & Sécurité)
+:toc:
+:icons: font
+:source-highlighter: rouge
+
+Cette fiche compile les termes techniques de haut niveau utilisés lors des ateliers sur les vulnérabilités Cross-Site Scripting (XSS). La maîtrise de ces concepts est essentielle pour concevoir des applications web sécurisées et valider vos études de cas.
+
+== 1. Cycle de vie et Comportement d'une Attaque
+
+Persistance (Attaque Résidente)::
+* **Définition :** Caractéristique d'une donnée malveillante qui est sauvegardée de manière durable sur le serveur (ex: en base de données).
+* **Contexte XSS :** C'est le cœur du **Stored XSS** (Lab 2). L'attaque est virale car elle s'exécute automatiquement et passivement chez toute victime consultant la ressource infectée.
+* _Mentionné par : Steeve Zhou, Mylan Patisson._
+
+Éphémère (Attaque Non-Résidente)::
+* **Définition :** Caractéristique d'une attaque dont la charge utile n'est pas stockée sur le serveur cible, mais fait un simple "aller-retour" via la requête HTTP de la victime.
+* **Contexte XSS :** Définit le **Reflected XSS** (Lab 1) et le **DOM XSS** (Lab 5). L'attaque nécessite obligatoirement une action active de la victime (cliquer sur un lien piégé).
+* _Mentionné par : Alex Xu._
+
+Inerte (Code Neutralisé)::
+* **Définition :** État d'un script ou d'une balise qui est présent dans le code source de la page, mais que le moteur de rendu du navigateur refuse d'exécuter.
+* **Contexte XSS :** Un payload devient inerte s'il est mal positionné (erreur de syntaxe) ou s'il a été correctement encodé par le serveur.
+* _Mentionné par : Alex Xu._
+
+== 2. Mécanismes d'Affichage et de Défense
+
+Entité (HTML)::
+* **Définition :** Chaîne de caractères standardisée commençant par `&` et finissant par `;`, utilisée pour représenter des caractères réservés en HTML.
+* **Contexte XSS :** Le symbole `\&lt;` devient l'entité `\&amp;lt;`. C'est le mécanisme technique qui empêche le navigateur d'interpréter un signe mathématique comme le début d'une balise exécutable.
+* _Mentionné par : Steeve Zhou, Mylan Patisson._
+
+Encoder / Échapper (Output Encoding)::
+* **Définition :** Opération consistant à convertir les caractères spéciaux saisis par l'utilisateur en leur équivalent visuel inoffensif (les entités) juste avant leur affichage à l'écran.
+* **Contexte XSS :** C'est la règle d'or absolue de la remédiation contre le XSS.
+* _Mentionné par : Alkaim Chanfi._
+
+<<<
+
+== 3. Foire Aux Questions (Expertise Technique)
+
+[IMPORTANT]
+.FAQ 1 : Quelle différence entre Encodage et Chiffrement ? (Question à M. Trusgnach)
+====
+Ces deux concepts n'ont ni le même but, ni les mêmes technologies :
+
+* **L'Encodage (ex: Entités HTML, Base64, URL Encoding) :**
+** **But :** Formater la donnée pour qu'elle soit transportée ou affichée correctement et sans danger par un système (ici, le navigateur).
+** **Sécurité :** L'encodage ne cache rien. Il est réversible publiquement. Il n'y a pas de mot de passe ni de clé. N'importe qui peut lire une donnée encodée.
+
+* **Le Chiffrement / Cryptographie (ex: AES, RSA, HTTPS/TLS) :**
+** **But :** Protéger la *confidentialité* de la donnée. Seules les personnes autorisées doivent pouvoir la lire.
+** **Sécurité :** Nécessite obligatoirement une **clé cryptographique** secrète pour verrouiller et déverrouiller la donnée. Un attaquant qui intercepte un texte chiffré sans la clé ne verra qu'une bouillie de caractères illisibles.
+
+_En résumé : On encode pour protéger l'intégrité de l'affichage (anti-XSS). On chiffre pour protéger le secret des données (anti-espionnage)._
+====
+
+[WARNING]
+.FAQ 2 : L'encodage HTML est-il TOUJOURS inoffensif ? (Question à A. Xu)
+====
+**Non, l'encodage HTML simple ne protège pas de tout ! L'encodage doit être adapté au CONTEXTE.**
+
+Convertir `\&lt;` en `\&amp;lt;` est efficace si la donnée est affichée au milieu d'un paragraphe HTML normal (`\&lt;p\&gt;Ici\&lt;/p\&gt;`). Mais cela devient inefficace si l'injection se fait dans d'autres contextes :
+
+1. **Contexte Attribut d'URL :** `<a href="VOTRE_SAISIE">Lien</a>`
+-> Si l'utilisateur saisit `javascript:alert(1)`, il n'y a aucun chevron `\&lt;` à encoder. Le code s'exécutera au clic. Il faut ici faire un *URL Encoding*.
+2. **Contexte JavaScript :** `<script>var nom = 'VOTRE_SAISIE';</script>`
+-> Si l'utilisateur saisit `'; alert(1); //`, il n'y a pas de chevrons non plus. L'encodage HTML standard ne fera rien. Il faut utiliser des fonctions d'échappement spécifiques à JavaScript.
+
+_La vraie règle d'or est donc : "Encoder toutes les données affichées **en fonction de leur contexte de sortie**"._
+====

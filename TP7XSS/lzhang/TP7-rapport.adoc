@@ -1,0 +1,104 @@
+= Compte rendu de TP : Cybersécurité
+:author: ZHANG Luc
+:toc: left
+:imagesdir: img
+
+== TP 7
+
+
+
+
+---
+
+== Réponses aux questions :
+
+=== Partie 1 : Test du niveau 1 de sécurité
+
+1. **Est-ce que le niveau de sécurité 1 permet d’éviter l’attaque avec Burpsuite ?** +
+Non. Le niveau 1 repose généralement sur des validations côté client (HTML/JS). Burp Suite intercepte la requête HTTP après ces validations, permettant d'envoyer n'importe quelle charge utile directement au serveur.
+
+image::screen2.png[Challenge numéro 1]
+
+2. **Est-il possible d’écrire le code malicieux directement dans le formulaire ?** +
+Oui, on peut le saisir, mais si un attribut HTML `maxlength` ou un script de validation JS est présent, le formulaire bloquera l'envoi. C'est là que l'interception par proxy devient nécessaire.
+
+3. **En observant le code de la page dns-lookup.php, repérer les sécurités activées à ce niveau.** +
+À ce niveau, les entrées utilisateur ne sont pas filtrées. On remarque l'absence de fonctions de nettoyage (sanitization) comme `stripslashes()` ou `htmlspecialchars()`, laissant le système vulnérable aux injections.
+
+4. **Quels sont les caractères typiques utilisés lors d’une attaque XSS ?** +
+Les caractères clés sont : `<` , `>`, `"`, `'`, `(`, `)`, `/` et `;`. Ils servent à forcer la création de balises HTML ou à exécuter des fonctions JavaScript.
+
+=== Test du niveau 5 de sécurité
+
+5. **Est-ce que le niveau de sécurité 5 permet d’éviter l’attaque avec BurpSuite ?** +
+Oui. À ce niveau, la sécurité est traitée côté serveur. Le serveur vérifie et nettoie les données reçues avant de les traiter, peu importe si elles ont été modifiées via Burp Suite ou non.
+
+6. **En observant le fichier dns-lookup.php, repérer les variables spécifiques associées à ce niveau de protection.** +
+On remarque l'utilisation de fonctions de filtrage PHP comme `filter_var()` ou des expressions régulières (`preg_match`). Les variables sont souvent vérifiées par rapport à une "whitelist" (liste blanche).
+
+7. **Expliquer le rôle de l’instruction suivante dans le fichier dns-lookup.php (ligne n° 44) :** +
+Cette instruction sert à **assainir l'entrée**. Elle retire ou encode les caractères spéciaux pour s'assurer que l'argument passé à la commande système ne contient que des données attendues (comme une adresse IP) et non des commandes malveillantes.
+
+8. **Que vérifie la protection contre les injections de commandes ?** +
+Elle vérifie la présence de caractères de chaînage de commandes tels que `;`, `&&`, `|` ou `||`, qui permettent d'exécuter une seconde commande non prévue sur le système d'exploitation.
+
+9. **Quelle fonction permet d’éviter spécifiquement les attaques de type XSS ?** +
+La fonction `htmlspecialchars()` est la plus utilisée en PHP car elle convertit les caractères spéciaux en entités HTML (ex: `<` devient `&lt;`), empêchant ainsi leur interprétation par le navigateur.
+
+10. **Modifier le code source de la page dns-lookup.php afin d’isoler l’effet de cette protection.** +
+On peut commenter la ligne de filtrage pour réinjecter la variable brute `$target` directement dans la fonction d'exécution, simulant ainsi un retour au niveau 1 pour observer la vulnérabilité.
+
+11. **Résumer les protections mises en œuvre par le niveau de protection n°5.** +
+* **Validation stricte** du format des données (ex: regex pour IP).
+* **Échappement** des caractères spéciaux.
+* **Filtrage côté serveur** systématique.
+
+=== Partie 2 : Analyse technique et bonnes pratiques
+
+**Dans le Lab 3, pourquoi l’injection classique `<script>alert(1)</script>` ne fonctionne-t-elle pas ?** +
+Le navigateur (ou le serveur) effectue un **encodage des entités HTML**. Les caractères `<` et `>` sont transformés en texte brut. Le navigateur affiche donc le script comme une simple chaîne de caractères au lieu de l'exécuter comme du code.
+
+1. **Fermer puis relancer BurpSuite...** +
+[Action effectuée]
+
+2. **L’attaque réussit-elle avec le niveau de sécurité 5 ?** +
+Non, car les mécanismes de défense bloquent la charge utile ou la neutralisent avant qu'elle ne produise un effet.
+
+3. **Ouvrir la page show-log.php... Pourquoi la validation des entrées n’est pas suffisante ?** +
+La validation en entrée (input validation) n'est qu'une première barrière. Si une donnée malveillante parvient tout de même à être stockée en base de données, elle peut être exécutée lors de l'affichage. Il est donc crucial d'avoir aussi un **encodage en sortie** (output encoding).
+
+4. **Expliquer le rôle des options de sécurité activées au niveau 5.** +
+Elles assurent une **défense en profondeur**. En combinant le filtrage des caractères dangereux et l'encodage systématique, on réduit drastiquement la surface d'attaque.
+
+5. **Rechercher d’autres exemples d’encodage :** +
+* **URL Encoding :** `%20` pour l'espace, `%3C` pour `<`.
+* **Hex Encoding :** `\x3C` (utilisé en JS ou C).
+* **Base64 :** Utilisé pour transmettre des données binaires dans des flux textuels.
+
+6. **Conclure sur les bonnes pratiques en matière de protection contre le XSS.** +
+Pour protéger une application, il faut :
+* Toujours filtrer les entrées côté serveur.
+* Utiliser l'encodage HTML en sortie (`htmlspecialchars`).
+* Mettre en place une **Content Security Policy (CSP)** pour restreindre les sources de scripts autorisées.
+
+
+=== 6. Conclure sur les bonnes pratiques en matière de protection contre le XSS
+
+En synthèse de ce TP, la protection contre les vulnérabilités XSS (Cross-Site Scripting) ne doit pas reposer sur une seule méthode, mais sur une stratégie de défense en profondeur. Les bonnes pratiques essentielles sont les suivantes :
+
+* **Validation des données en entrée (Input Validation) :** Il est impératif d'effectuer des vérifications systématiques côté serveur. On utilise pour cela des **listes blanches** (caractères autorisés) ou des **listes noires** (caractères interdits via des expressions régulières comme `[^<>&\\]`) pour s'assurer que la donnée reçue est conforme au format attendu.
+
+* **Encodage des paramètres (Output Encoding) :** C'est la mesure la plus efficace. Elle consiste à transformer les caractères spéciaux en entités inoffensives avant l'affichage. Il est crucial d'**adapter l'encodage au contexte** de sortie :
+** `encodeForHTML` : pour l'affichage dans le corps d'une page.
+** `encodeForJavaScript` : pour les données insérées dans des scripts.
+** `encodeForURL` : pour les paramètres de liens.
+
+* **Défense multi-niveaux :** Comme nous l'avons vu avec le passage au niveau 5, la sécurité côté client (navigateur) est facilement contournable avec des outils comme **Burp Suite**. La sécurité doit donc être traitée prioritairement par le code applicatif (PHP, Java, etc.).
+
+> **En résumé :** Une application sécurisée considère par défaut que toute entrée utilisateur est malveillante. Le développeur doit "nettoyer" à l'entrée et "neutraliser" (encoder) à la sortie.
+
+
+=== Défi Supplémentaire : XSS Stocké via le pseudo-protocole JavaScript
+
+
+image::screen.png[Challenge numéro 2]

@@ -1,0 +1,73 @@
+= Compte rendu — TP5 : Marie-Dominique Dzalamou
+v1.0, 2026-02-05
+:toc: left
+:toc-title: Sommaire
+:sectnums:
+:icons: font
+:imagesdir: imgmdz
+:source-highlighter: rouge
+
+=== Question 1
+
+**Question :**
+Dans le Lab 1, pourquoi l’ajout de OR 1=1 permet-il d’afficher des données qui étaient censées être cachées ? Expliquez la logique booléenne.
+
+**Réponse de Marie-Dominique Dzalamou :**
+_Ce qui nous empêcher d'accéder au données cachés était une clause, avec le l'ajout du "OR 1=1", nous avons bypasser cette clause en disant qu'elle était tout le temps vrai_
+
+image::1.png[Capture Lab 1]
+
+[green]#**Correction / Commentaire :**#
+[green]#C'est exact. En termes techniques, `1=1` est une **tautologie** (une vérité absolue). Avec l'opérateur `OR`, si une partie est vraie, l'ensemble de la condition devient vrai. Cela annule donc le filtre `AND released=1` qui cachait les données.#
+
+=== Question 2
+
+**Question :**
+Dans le Lab 2, quel est le rôle précis des caractères -- (ou # selon la base de données) à la fin de votre injection ? Pourquoi cela permet-il de se passer du mot de passe ?
+
+**Réponse de Marie-Dominique Dzalamou :**
+_Les caractères "--" servent à mettre la suite de la requête SQL, donc ici le mot de passe, en commentaire, pour que cette partie ne soit plus pris en compte_
+
+image:2.png[Capture Lab 2]
+
+[green]#**Correction / Commentaire :**#
+[green]#Réponse parfaite. Vous avez bien identifié le mécanisme du commentaire SQL qui neutralise la vérification du mot de passe située en fin de requête.#
+
+=== Question 3
+
+**Question :**
+Dans le Lab 3 (UNION), pourquoi est-il obligatoire de connaître le nombre exact de colonnes avant de pouvoir extraire des données ? Que se passe-t-il si les deux requêtes n’ont pas la même structure ?
+
+**Réponse de Marie-Dominique Dzalamou :**
+_Si l'on ne respecte pas le nombre exacte de colonnes, la requête affichera un erreur quand on voudra extraire les données, d'où l'importance de faire un union pour savoir le nombre de colonnes de la table._
+
+image::3.png[Capture Lab 3]
+
+[green]#**Correction / Commentaire :**#
+[green]#C'est correct. L'erreur (souvent une 500 Internal Server Error) vient du fait que le moteur SQL ne peut pas fusionner deux tableaux de tailles différentes.#
+[green]#Notez aussi que les **types de données** (texte, nombres) doivent être compatibles dans le même ordre.#
+
+=== Question 4
+
+**Question :**
+Quelle est la meilleure méthode de protection (côté code PHP/Java/C#) pour empêcher totalement les injections SQL, rendant les caractères comme ' ou OR inefficaces ?
+
+**Réponse de Marie-Dominique Dzalamou :**
+_La meilleure méthode de protection est l'utilisation des requêtes préparées, pour éviter que les injections se faufilent et qu'elles soient considérées comme de simples données brutes dans le code_
+
+image::4.png[Capture Lab 4]
+
+[green]#**Correction / Commentaire :**#
+[green]#Très bien formulé. La distinction entre "Code" (l'instruction SQL) et "Données brutes" (ce que tape l'utilisateur) est la clé de la sécurité apportée par les requêtes préparées.#
+
+=== Question 5
+
+**Question :**
+Dans une injection SQL "Blind" (Aveugle), l’attaquant ne voit jamais les données s’afficher à l’écran. Comment fait-il alors pour voler un mot de passe entier ? Pourquoi cette technique est-elle beaucoup plus lente qu’une injection UNION classique ?
+
+**Réponse de Marie-Dominique Dzalamou :**
+_Dans une injection SQL "Blind", l'attaquant réalise plusieurs tentatives à chaque caractères du mot de passe pour tomber sur le bon en se fiant à la réponse que lui retourne le site._
+_Cette attaque est très longue à la main puisqu'on doit faire plusieurs essaies répété pour chaque caractères, alors que le union nous permet directement d'avoir les informations de la BBD._
+
+[green]#**Correction / Commentaire :**#
+[green]#Excellent résumé. Vous avez bien compris que l'on passe d'une extraction en masse (UNION) à une devinette "caractère par caractère" (Blind), ce qui multiplie le nombre de requêtes nécessaires par 100 ou 200.#

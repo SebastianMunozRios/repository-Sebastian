@@ -1,0 +1,88 @@
+= Compte-rendu du TP 6 : Injection XSS (Philopatir WARDI ROMANI)
+:author: Philopatir WARDI ROMANI
+:toc: left
+:toc-title: Sommaire
+:icons: font
+:source-highlighter: rouge
+:imagesdir: imgpwardiromani
+---
+
+== Capture d'écrans de réussite des Labs.
+.Capture d'écran de la réussite (Lab 1)
+image::TP6_Lab1-screen.png[Capture Lab 1, width=900]
+.Capture d'écran de la réussite (Lab 2)
+image::TP6_Lab2-scren.png[Capture Lab 2, width=900]
+.Capture d'écran de la réussite (Lab 3)
+image::TP6_Lab3-screen.png[Capture Lab 3, width=900]
+.Capture d'écran de la réussite (Lab 4)
+image::TP6_Lab4-screen.png[Capture Lab 4, width=900]
+.Capture d'écran de la réussite (Lab 5)
+image::TP6_Lab5-screen.png[Capture Lab 5, width=900]
+
+== Q1 : Quelle est la différence majeure entre le Lab 1 (Reflected) et le Lab 2 (Stored) en termes de dangerosité ? Si vous vouliez piéger un administrateur, quelle méthode serait la plus efficace pour ne pas éveiller les soupçons ?
+
+*Réponse de Philopatir :*
+_La différence majeure, c'est le stockage._
+_** Lab 1 : Le code malveillant n'est pas enregistré. Il faut que la victime clique sur un lien spécial pour que ça marche._
+_** Lab 2 : Le script est enregistré dans la base de données comme un commentaire._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Bon début.** Tu as bien identifié la différence de stockage. Il manque juste la conclusion logique pour la deuxième partie de la question : pour piéger l'administrateur sans éveiller les soupçons, c'est le **Lab 2 (Stored)** qu'il faut utiliser, car l'admin sera infecté simplement en lisant la page (les commentaires par exemple), sans avoir besoin de cliquer sur un lien suspect.#
+
+---
+
+== Q2 : Dans le Lab 3, pourquoi l’injection classique `<script>alert(1)</script>` ne fonctionne-t-elle pas ? Expliquez techniquement ce que fait le navigateur avec les caractères `< et >`.
+
+*Réponse de Philopatir :*
+_L'injection <script> ne marche pas parce le site fait de l'encodage HTML._
+_Techniquement, quand le navigateur voit les caractères < et >, il les transforme en texte inoffensif < et >._
+_Au lieu de voir une balise qui doit s'exécuter, le navigateur croit que c'est juste du texte à afficher à l'intérieur de la petite case (l'attribut value)._
+_Du coup, le script ne "sort" jamais de sa boîte et reste affiché comme une simple phrase._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Attention à la chronologie !** Ce n'est pas le navigateur qui transforme les caractères. C'est le **serveur** (le code PHP/Java du site) qui fait l'encodage avant d'envoyer la page. Le serveur transforme les chevrons en entités HTML (ex: `\&lt;` et `\&gt;`). Ensuite, quand le navigateur lit la page, il voit ces entités et obéit : il dessine les chevrons à l'écran au lieu de les exécuter. La conclusion ("le script ne sort jamais de sa boîte") est en revanche très bien imagée !#
+
+---
+
+== Q3 : Dans le Lab 4, votre payload ressemble à `'; alert(1); //`. Expliquez précisément le rôle de chaque partie de cette chaîne : `* ' : Sert à …​* ; : Sert à …​* // : Sert à …​`
+
+*Réponse de Philopatir :*
+Ici, on est déjà à l'intérieur d'un script qui existe. On doit manipuler les signes pour ne pas faire planter le programme :
+
+ ' (le guillemet) : Sert à fermer la chaîne de caractères commencée par le développeur.
+
+ ; (le point-virgule) : Sert à terminer l'instruction en cours proprement. Comme ça, on peut passer à l'instruction suivante (notre alert).
+
+`//` (le double slash) : Sert à mettre en commentaire tout ce qui reste sur la ligne après notre injection. Ça évite que les morceaux de code originaux du site (qui traînent encore après notre injection) ne créent des erreurs de syntaxe._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Parfait.** Une explication sans faille de l'évasion du contexte JavaScript. C'est précis et technique.#
+
+
+== Q4 : Pourquoi un pare-feu applicatif (WAF) situé sur le serveur a-t-il plus de mal à détecter une faille DOM XSS par rapport à une faille Reflected XSS classique ? (Indice : Où s’exécute le code vulnérable ?)
+
+*Réponse de Philopatir :*
+_Le pare-feu a du mal parce que le DOM XSS s'exécute uniquement dans le navigateur de l'utilisateur (côté client), pas sur le serveur._
+_Dans un XSS classique, le script passe par le serveur, donc le pare-feu peut l'intercepter. Dans un DOM XSS, le script est souvent caché dans la partie après le # ou géré directement par des fonctions JavaScript locales. Le serveur ne voit même pas passer le code malveillant._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Excellent.** L'explication sur le fragment de l'URL `#`#
+[green]#qui reste "côté client" prouve que le concept de DOM XSS est  assimilé.#
+
+
+== Q5 : Si vous étiez développeur, quelle est la règle d’or pour empêcher les failles XSS ?
+
+*Réponse de Philopatir :*
+
+_Interdire "script" : C'est inutile, les hackers peuvent utiliser d'autres balises comme `<img onerror=...>` ou `<svg onload=...>`._
+
+_Requêtes SQL préparées : Pas très utile ici, mais ça protège contre les Injections SQL, pas contre le XSS (qui touche l'affichage HTML)._
+
+_L'encodage : C'est la seule vraie parade. Si tu transformes systématiquement les `<` en `pass:[&lt;]`, le navigateur ne pourra jamais interpréter du texte utilisateur comme étant du code._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Réponse modèle.** Démonter les mauvaises solutions pour prouver que l'on a choisi la bonne est une méthode de raisonnement redoutable. C'est exactement ce qu'on attendra de toi lors des études de cas de fin de cursus.#
+
+---
+
+`Compte Rendu de Philopatir WARDI ROMANI`

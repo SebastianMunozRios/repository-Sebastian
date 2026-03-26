@@ -1,0 +1,71 @@
+= Compte rendu de TP : BLOC 3 04-Atelier Sessions Portswigger
+:author: ZHOU Steeve
+:toc: left
+:imagesdir: imgzhou
+:icons: font
+:source-highlighter: rouge
+
+== Challenges
+
+=== Challenge 1
+image::lab1.png[Capture Challenge 1]
+
+=== Challenge 2
+image::lab2.png[Capture Challenge 2]
+
+=== Challenge 3
+image::lab3.png[Capture Challenge 3]
+
+=== Challenge 4
+image::lab4.png[Capture Challenge 4]
+
+=== Challenge 5
+image::lab5.png[Capture Challenge 5]
+
+---
+
+== Réponses aux questions
+
+=== Q1. Quelle est la différence majeure entre le Lab 1 (Reflected) et le Lab 2 (Stored) en termes de dangerosité ? Si vous vouliez piéger un administrateur, quelle méthode serait la plus efficace pour ne pas éveiller les soupçons ?
+
+*Réponse de Steeve Zhou :*
+_Le Stored XSS est plus dangereux car le script est hébergé durablement sur le serveur, touchant ainsi chaque utilisateur qui consulte la page sans action spécifique de leur part. Pour piéger un administrateur discrètement, la méthode stockée est la plus efficace car elle ne nécessite pas l'envoi d'un lien suspect et s'active automatiquement lors d'une consultation de routine._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Excellent.** La notion de persistance ("hébergé durablement") est la clé ici. L'aspect ingénierie sociale (éviter le lien suspect) pour cibler un administrateur est très bien compris.#
+
+
+
+=== Q2. Dans le Lab 3, pourquoi l’injection classique <script>alert(1)</script> ne fonctionne-t-elle pas ? Expliquez techniquement ce que fait le navigateur avec les caractères < et >.
+
+*Réponse de Steeve Zhou :*
+_Dans le Lab 3, l'injection échoue car les caractères < et > sont encodés en entités HTML par le serveur, ce qui empêche le navigateur de les interpréter comme des balises. Le navigateur traite alors ces symboles comme du texte brut inoffensif destiné à l'affichage au lieu de les considérer comme des instructions de code exécutables._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Parfait.** L'utilisation des termes "entités HTML" et "texte brut inoffensif" démontre une compréhension technique solide du mécanisme d'échappement par le navigateur.#
+
+=== Q3. Dans le Lab 4, votre payload ressemble à '; alert(1); //. Expliquez précisément le rôle de chaque partie de cette chaîne : * ' : Sert à …​* ; : Sert à …​* // : Sert à …​
+
+*Réponse de Steeve Zhou :*
+_Dans le Lab 4, l'apostrophe ' sert à fermer la chaîne de caractères JavaScript en cours dans laquelle votre entrée est injectée. Le point-virgule ; agit comme un séparateur d'instructions pour terminer la commande précédente et permettre l'exécution de votre fonction alert(1). Enfin, les doubles barres obliques // servent à mettre en commentaire le reste du code original afin d'éviter toute erreur de syntaxe qui bloquerait l'exécution du script._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Sans faute.** C'est l'explication exacte attendue pour comprendre comment on s'échappe d'un contexte JavaScript existant sans faire planter l'interpréteur.#
+
+=== Q4. Pourquoi un pare-feu applicatif (WAF) situé sur le serveur a-t-il plus de mal à détecter une faille DOM XSS par rapport à une faille Reflected XSS classique ? (Indice : Où s’exécute le code vulnérable ?)
+
+*Réponse de Steeve Zhou :*
+_Un pare-feu applicatif (WAF) a du mal à détecter le DOM XSS car l'attaque se déroule entièrement dans le navigateur du client sans que le script malveillant ne soit nécessairement envoyé au serveur. Contrairement au Reflected XSS où la charge utile passe par les requêtes HTTP analysées par le WAF, le DOM XSS manipule des données locales comme l'ancre de l'URL (#) qui reste invisible pour le serveur._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Brillant.** La mention de l'ancre (`#`) qui n'est par définition jamais transmise dans la requête HTTP vers le serveur prouve que le concept de traitement purement "Client-Side" est totalement acquis.#
+
+
+
+=== Q5. Si vous étiez développeur, quelle est la règle d’or pour empêcher les failles XSS ?
+
+*Réponse de Steeve Zhou :*
+_La règle d’or est d'encoder (échapper) toutes les données affichées à l'écran, car cela neutralise l'interprétation des caractères spéciaux par le navigateur, quel que soit le contexte d'injection. Contrairement au simple bannissement du mot "script" qui est facilement contournable, l'encodage transforme systématiquement les symboles dangereux comme < en entités inoffensives telles que &lt;. Les requêtes SQL préparées, bien qu'essentielles, servent uniquement à prévenir les injections SQL et non les failles XSS._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Réponse modèle.** L'encodage contextuel des sorties est effectivement la seule défense robuste. C'est très bien d'avoir précisé la différence de périmètre avec les requêtes SQL préparées.#

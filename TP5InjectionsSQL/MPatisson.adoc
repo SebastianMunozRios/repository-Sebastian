@@ -1,0 +1,73 @@
+= TP5 Compte rendu : Mylan Patisson
+:toc: left
+:icons: font
+:source-highlighter: rouge
+:imagesdir: imgmpatisson
+
+== Lab 2.1 : Voir ce qu’on ne devrait pas voir
+
+image::labo1.png[Preuve Lab 1]
+
+=== Q1. Dans le Lab 1, pourquoi l’ajout de OR 1=1 permet-il d’afficher des données qui étaient censées être cachées ? Expliquez la logique booléenne.
+
+*Réponse de Mylan Patisson :*
+_Car l'ajout de OR 1=1 dit que la conditions sera toujours VRAI , le 1=1 est une condition VRAI car 1 = toujours à 1._
+
+[green]#**Correction / Commentaire :**#
+[green]#C'est exact. En logique booléenne, `X OR VRAI` donne toujours `VRAI`.#
+[green]#L'injection force la base de données à ignorer le filtre de sécurité initial (qui demandait si le produit était publié) car votre condition `1=1` prend le dessus sur tout le reste.#
+
+== Lab 2.2 : Contournement d’Authentification
+
+image::labo2.png[Preuve Lab 2]
+
+=== Q2. Dans le Lab 2, quel est le rôle précis des caractères -- (ou # selon la base de données) à la fin de votre injection ? Pourquoi cela permet-il de se passer du mot de passe ?
+
+*Réponse de Mylan Patisson :*
+_Le rôle de ses caractères est de définir le reste de la ligne de code en commentaire,donc deviendra invisible lors de l'éxécution et enlevera toute autre condition_
+
+[green]#**Correction / Commentaire :**#
+[green]#Très bien. Pour être précis sur la seconde partie de la question : cela permet de se passer du mot de passe car la vérification `AND password = '...'` se trouve *après* les tirets. Elle est donc transformée en commentaire inactif par la base de données.#
+
+== Lab 2.3 : Préparer l’extraction (UNION Attack 1)
+
+image::labo3.png[Preuve Lab 3]
+
+=== Q3. Dans le Lab 3 (UNION), pourquoi est-il obligatoire de connaître le nombre exact de colonnes avant de pouvoir extraire des données ? Que se passe-t-il si les deux requêtes n’ont pas la même structure ?
+
+*Réponse de Mylan Patisson :*
+_Car l'opérateur UNION exige d'avoir le meme nombre de colonne pour les deux requetes sinon elle retourne une erreur_
+
+[green]#**Correction / Commentaire :**#
+[green]#Réponse valide. J'ajoute un détail important : en plus du nombre de colonnes, les **types de données** (texte, chiffre) doivent être compatibles dans le même ordre.#
+
+== Lab 2.4 : Le Braquage de données (UNION Attack 2)
+
+image::labo4.png[Preuve Lab 4]
+
+=== Q4. Quelle est la meilleure méthode de protection (côté code PHP/Java/C#) pour empêcher totalement les injections SQL, rendant les caractères comme ' ou OR inefficaces ?
+
+*Réponse de Mylan Patisson :*
+_C'est l'utilisation de requête préparer paramétrer, qui permettra l'annulation de toute tentative d'injection SQL_
+
+[green]#**Correction / Commentaire :**#
+[green]#Exactement (Requêtes préparées / Prepared Statements).#
+[green]#Elles fonctionnent car elles séparent la requête (le code) de la donnée (le paramètre utilisateur), empêchant la donnée d'être interprétée comme du code SQL.#
+
+== Lab 2.5 : L’Injection en Aveugle (Blind SQLi)
+
+=== Q5. Dans une injection SQL "Blind" (Aveugle), l’attaquant ne voit jamais les données s’afficher à l’écran. Comment fait-il alors pour voler un mot de passe entier ? Pourquoi cette technique est-elle beaucoup plus lente qu’une injection UNION classique ?
+
+*Réponse de Mylan Patisson :*
+_Pour voler un mot de passe en entier il peut se baser sur le temp de réponse du serveur par rapport à chaque lettre puis reconstituer le MDP avec les temps de réponses obtenus._
+_Exemple : admin' AND IF(substring(database(),1,1)='a', sleep(2), 0) # (L'attaquant demande a la base de données si la première lettre est 'a' si c'est 'a' il répondra deux secondes plus tard, sinon instantanément )_
+_Cette technique est plus lente car si un voyant fait la course contre un aveugle , l'aveugle sera forcément désavantager. Pour une injection à l'aveugle on ne reçoit rien et on ne peut se baser sur rien à part de faire "dormir" ou "courir" le serveur en cas de bonne réponse , ce qui est plus long à preparer._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Excellente initiative technique !** Vous décrivez ici une "Time-Based Blind SQLi" (basée sur le temps), ce qui est encore plus avancé que la méthode booléenne classique. Votre exemple de code `sleep(2)` est pertinent.#
+
+[green]#Cependant, concernant la "lenteur", l'analogie de la course est un peu vague. La vraie raison technique de la lenteur est mathématique :#
+
+[green]#**UNION :** 1 requête = 1000 lignes de résultats.#
+
+[green]#**BLIND :** Pour 1 mot de passe de 8 caractères, il faut faire environ 100 à 200 requêtes (tester tout l'alphabet pour la lettre 1, puis la lettre 2, etc.). C'est le **nombre de requêtes** nécessaires qui rend l'attaque lente et bruyante sur le réseau.#

@@ -1,0 +1,109 @@
+= Séance 8 : Notions Transverses (SSRF, File Upload & OS Command Injection)
+:toc: left
+:toc-title: Sommaire
+:icons: font
+:source-highlighter: rouge
+:imagesdir: ./images
+
+Cette séance s'appuie sur la Web Security Academy de PortSwigger pour explorer trois vulnérabilités critiques. Pour chaque laboratoire, l'utilisation de **Burp Suite (Community Edition)** est indispensable.
+
+---
+
+== Partie 1 : Server-Side Request Forgery (SSRF)
+
+=== Cadrage Théorique et OWASP
+* **Position OWASP :** **A10:2021 – Server-Side Request Forgery (SSRF)**
+* **Définition :** Une faille SSRF survient lorsqu’une application web vulnérable est manipulée pour émettre une requête HTTP vers un domaine arbitraire choisi par l'attaquant. Le serveur agit alors comme un "relais" aveugle.
+* **Le concept clé (La relation de confiance) :** Les systèmes internes (bases de données, interfaces d'administration locales) font implicitement confiance aux requêtes provenant du serveur web lui-même. En contrôlant les requêtes émises par ce serveur, l'attaquant contourne les pare-feux externes et hérite des privilèges réseau du serveur.
+
+En 2025, la faille a disparu en tant que telle. Mais elle a été consolidée et fusionnée au sein de la catégorie **A01:2025 - Broken Access Control**  (Contrôle d'accès défaillant)
+
+=== Mesures Correctives (Remédiations)
+Pour se prémunir du SSRF, les développeurs doivent :
+
+1. **Utiliser une liste blanche (Whitelisting) :** N'autoriser que les URL et domaines strictement nécessaires au fonctionnement de l'application. Ne jamais faire confiance aux URL soumises par l'utilisateur.
+2. **Désactiver les schémas non nécessaires :** Bloquer les schémas comme `file://`, `dict://`, `ftp://` si seul `http/https` est requis.
+3. **Segmentation réseau :** Placer les interfaces d'administration sur des réseaux distincts (VLAN) inaccessibles depuis les serveurs exposés sur le web.
+
+=== Laboratoires Pratiques
+
+==== Lab 1.1 : SSRF basique contre le serveur local
+* **Lien :** https://portswigger.net/web-security/ssrf/lab-basic-ssrf-against-localhost
+* **Objectif :** Obtenir un accès à un panneau d’administration caché sur la boucle locale (`localhost`) et supprimer l'utilisateur "carlos".
+* **Indications :** Interceptez la requête de vérification des stocks (`stockApi`) avec Burp Suite. Modifiez l'URL pour pointer vers la boucle locale du serveur.
+
+==== Lab 1.2 : SSRF contre un autre système du back-end
+* **Lien :** https://portswigger.net/web-security/ssrf/lab-basic-ssrf-against-backend-system
+* **Objectif :** Découvrir l’adresse IP d'un panneau d'administration caché sur le réseau local et supprimer un utilisateur.
+* **Indications :** Le réseau ciblé est sur la plage `192.168.0.X` (port 8080).
+[WARNING]
+====
+**Travail de Groupe :** La version Community de Burp Suite bride la vitesse de l'outil **Intruder**. Mettez-vous par groupes de 4 et répartissez-vous les plages d'adresses IP (ex: de 1 à 64, de 65 à 128, etc.) pour trouver rapidement la bonne adresse !
+====
+
+==== Lab 1.3 : SSRF avec contournement de liste noire (Blacklist Bypass)
+* **Lien :** https://portswigger.net/web-security/ssrf/lab-ssrf-with-blacklist-filter
+* **Objectif :** Contourner les défenses du développeur (qui a bloqué les mots `localhost`, `127.0.0.1` et `admin`) pour accéder à l'administration.
+* **Indications :** Utilisez des représentations alternatives (comme `127.1`) et le **double encodage d'URL** sur certains caractères du mot "admin" pour tromper le filtre de sécurité.
+
+=== 1.4. Questions de Synthèse (SSRF)
+1. **Liée au Lab 1.1 :** D'un point de vue réseau, expliquez pourquoi le panneau d'administration refuse votre connexion si vous tapez l'URL directement dans votre navigateur, mais l'accepte lorsque la requête passe par la vulnérabilité `stockApi` ?
+2. **Liée au Lab 1.2 :** Quel outil de Burp Suite avez-vous utilisé pour automatiser la découverte de l'adresse IP interne, et quel paramètre précis servait de "marqueur" (Payload position) pour itérer de 1 à 255 ?
+3. **Liée au Lab 1.3 :** Pourquoi l'utilisation d'une "liste noire" (Blacklist) pour sécuriser un champ de saisie est-elle généralement considérée comme une très mauvaise pratique en cybersécurité par rapport à une "liste blanche" (Whitelist) ?
+
+
+== Partie 2 : Vulnérabilités d'Upload de Fichiers (File Uploads)
+
+=== Cadrage Théorique et OWASP
+* **Position OWASP :** Transversal. Souvent classé sous **A04:2021 – Insecure Design** ou **A05:2021 – Security Misconfiguration**.
+* **Définition :** Survient lorsqu'une application permet à l'utilisateur de téléverser un fichier sans en valider rigoureusement le nom, le type, le contenu ou la taille.
+* **Le concept clé (MIME Type vs Extension) :** Les développeurs se fient souvent à tort au type MIME (ex: `image/jpeg`) déclaré par le navigateur lors de l'envoi (`Content-Type`). Or, cet en-tête est purement déclaratif et peut être facilement manipulé par un attaquant via un proxy pour faire passer un script exécutable pour une simple image.
+
+=== Mesures Correctives (Remédiations)
+Pour sécuriser un formulaire d'upload, il faut appliquer une défense en profondeur :
+
+1. **Stockage isolé :** Stocker les fichiers uploadés en dehors de la racine web (Web Root) pour empêcher leur exécution directe via une URL.
+2. **Renommage systématique :** Ne jamais conserver le nom de fichier original. Générer un identifiant unique (ex: UUID) à la sauvegarde.
+3. **Validation stricte (Whitelist) :** Vérifier l'extension réelle du fichier ET son contenu (Magic Bytes) pour s'assurer qu'il correspond bien au format attendu.
+
+=== Laboratoires Pratiques
+
+==== Lab 2.1 : Exécution de code à distance via un Web Shell
+* **Lien :** https://portswigger.net/web-security/file-upload/lab-file-upload-remote-code-execution-via-web-shell-upload
+* **Objectif :** Uploader un script PHP malveillant (Web Shell) et l'exécuter pour lire le contenu d'un fichier sensible distant (`/home/carlos/secret`).
+* **Indications :** Créez un fichier texte nommé `exploit.php` contenant la fonction `file_get_contents()`. Uploadez-le à la place de votre avatar.
+
+==== Lab 2.2 : Web shell via contournement de la restriction Content-Type
+* **Lien :** https://portswigger.net/web-security/file-upload/lab-file-upload-web-shell-upload-via-content-type-restriction-bypass
+* **Objectif :** Contourner la vérification du serveur qui exige spécifiquement l'upload d'une image.
+* **Indications :** Interceptez la requête POST d'upload avec Burp Suite et manipulez l'en-tête `Content-Type` de la section `multipart/form-data`.
+
+=== Questions de Synthèse (File Upload)
+4. **Liée au Lab 2.1 :** Analysez la fonction PHP utilisée pour votre Web Shell. Quelle est la signature exacte de la fonction `file_get_contents()` (paramètres obligatoires et facultatifs) et que retourne-t-elle ?
+5. **Liée au Lab 2.2 :** Dans la requête HTTP interceptée, expliquez techniquement la différence entre le paramètre `Content-Type` principal de la requête (souvent `multipart/form-data`) et le `Content-Type` déclaré spécifiquement pour le fichier uploadé ?
+
+
+
+== Partie 3 : Injection de Commandes Système (OS Command Injection)
+
+=== Cadrage Théorique et OWASP
+* **Position OWASP :** **A03:2021 – Injection**
+* **Définition :** Permet à un attaquant d’exécuter des instructions système (Shell) sur le serveur qui héberge l’application.
+* **Le concept clé (Les métacaractères) :** Si l'application concatène la saisie utilisateur avec une commande système existante, l'attaquant peut utiliser des séparateurs de commandes propres à Linux ou Windows (comme `;`, `|`, `&&`, ou `||`) pour "casser" la commande originelle et exécuter la sienne à la suite.
+
+
+
+=== Mesures Correctives (Remédiations)
+1. **Éviter l'appel système :** C'est la règle d'or. Ne jamais appeler de commandes OS (comme `exec`, `system`, `popen`) directement depuis le code. Utiliser plutôt les API natives du langage de programmation.
+2. **Validation rigoureuse :** Si l'appel est inévitable, valider l'entrée avec une expression régulière très stricte (ex: autoriser uniquement des caractères alphanumériques).
+3. **Échappement des arguments :** Utiliser les fonctions dédiées à la sécurisation des arguments système (ex: `escapeshellarg()` en PHP).
+
+=== Laboratoire Pratique
+
+==== Lab 3.1 : OS Command Injection, cas simple
+* **Lien :** https://portswigger.net/web-security/os-command-injection/lab-simple
+* **Objectif :** Exploiter une application qui vérifie l'état des stocks pour exécuter la commande système `whoami` et afficher le nom de l'utilisateur courant du serveur.
+* **Indications :** La vulnérabilité se situe dans les paramètres envoyés lors de la vérification du stock. Utilisez le caractère pipe `|` ou le point-virgule `;` pour injecter votre commande.
+
+=== Question de Synthèse (OS Command Injection)
+6. **Liée au Lab 3.1 :** Si le développeur avait utilisé la fonction PHP `escapeshellarg()` sur la donnée que vous avez saisie, comment cette fonction aurait-elle transformé votre charge utile (payload) empêchant ainsi l'exécution de la commande `whoami` ?

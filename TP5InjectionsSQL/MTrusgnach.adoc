@@ -1,0 +1,70 @@
+= TP5 Compte rendu : Mathias Trusgnach
+:toc: left
+:icons: font
+:source-highlighter: rouge
+:imagesdir: imgmtrusgnach
+
+== Labo 1 : Voir ce qu’on ne devrait pas voir
+
+*Réponse de Mathias Trusgnach :*
+_T1: L'ajout de Or 1=1 permet d'afficher les données car on dit de remplacer un filtre par une requête qui est tout le temps vrai en effet les booléens sont des variables qui fonctionnent comme le binaire avec des 0 et des 1 pour faire simple la requête c'est comme si on disait qu'on remplassait le filtre catégorie par cette requête tout le temps vrai c'est comme si on disait qu'on voulait accèder au produit non commercialisé en remplacent le filtre par cette requête et d'exclure le filtre en effet car en mettant cette requête on a pu accèder à des produits non catalogué car -- en SQL signifie rajouter un commentaire et se concentrer que sur ce qui est vrai_
+
+image::Labo 1 réussite.png[Preuve Lab 1]
+
+[green]#**Correction / Commentaire :**#
+[green]#L'idée est là, mais la phrase est très longue et mélange un peu tout. Retenez simplement ceci : `OR 1=1` est une condition **toujours vraie** (une tautologie). Elle force la base de données à ignorer les restrictions précédentes. Les tirets `--` servent, eux, à ignorer la fin de la requête pour éviter les erreurs de syntaxe.#
+
+== Labo 2 : Contournement d’Authentification
+
+=== Question 2
+
+*Réponse de Mathias Trusgnach :*
+_Comme dit plus tôt ces caractères la -- et celui là # permettent en gros de faire dse commentaires et d'exclure la le reste du de la requête. Il permet de bypasser le mot de passe car il se concentre uniquement sur l'utilisateur admin, mais aussi de permettre de rechercher le mot de passe admin dans la BDD afin de pouvoir trouver le mot de passe correspondant_
+
+image::Labo 2.3 réussite.png[Preuve Lab 2]
+
+[green]#**Correction / Commentaire :**#
+[green]#Attention à une confusion importante : cette technique ne permet **pas** de "rechercher le mot de passe".#
+[green]#Au contraire, elle sert à **ignorer** la vérification du mot de passe. Le serveur voit `WHERE username='admin'` et s'arrête là grâce au commentaire. Il vous connecte donc sans jamais avoir vérifié le mot de passe.#
+
+== Labo 3 & 4 : Attaques UNION
+
+=== Question 3
+
+*Réponse de Mathias Trusgnach :*
+_Le fait de connaître exactement les colonnes permet à l'attaquant d'exfiltrer toute la base de donnée sans qu'une partie l'en échappe. Si les 2 BDD n'ont pas la même structure et n'ayant pas le nombre de colonne exact cela peut créer des problèmes de collision si on veut intéragir avec ces 2 bases de données et qu'on evoie une requête qui n'ont pas la même structure et cela peut empêcher l'exfiltration complète._
+
+[green]#**Correction / Commentaire :**#
+[green]#Le terme "collision" ou "partie qui s'échappe" est incorrect ici. C'est beaucoup plus strict : si le nombre de colonnes n'est pas identique, le serveur renvoie une **Erreur Fatale** (Internal Server Error 500) et la requête ne s'exécute pas du tout. C'est tout ou rien.#
+
+=== Question 4
+
+*Réponse de Mathias Trusgnach :*
+_Pour se protèger des caractères comme or ou ' on peut faire ce que l'on appelle une requête préparé paramétré cela permettra de faire une réquete au préalable afin l'empêcher ces caractères_
+
+image::Labo 3 réussite.png[Preuve Lab 3]
+
+[green]#**Correction / Commentaire :**#
+[green]#Correct. Les **Requêtes Préparées** sont la bonne solution.#
+
+== Labo 5 : Injection Blind (Aveugle)
+
+=== Question 5
+
+*Réponse de Mathias Trusgnach :*
+_Les hackers pour pouvoir faire ce genre de techniques ils vont esssayer toute les combinaisons possibles:_
+_- temps de chargement: en effet si un temps de chargement met plus de temps cela veut dire un mot de passe plus long ou au contraire un temps de chargement plus court signifie un temps de téléchargement plus court_
+_- longueur: en efet pour les hackers il est important de savoir la longueur d'un mot de passe et peut influer sur le temps de chargement_
+_- caractères: si un caractère n'est pas redondant ca peut avancer et réduire les possibilités, si un caractère unique, cela va mettre plus de temps_
+_C'est plus long que UNION car c'est à l'aveugle alors que UNION on contactenaque plusieurs bases de donnée en même temps pour pouvoir faciliter la recherche alors que la méthode blind se base sur quelquechose d'aléatoire c'est ca passe ou ca casse_
+
+image::Labo 2.4 réussite.png[Preuve Lab 5]
+
+[green]#**Correction / Commentaire :**#
+[green]#Il y a beaucoup de confusions ici :#
+
+[green]#1. Ce n'est pas "aléatoire". C'est une méthode très logique de déduction.#
+
+[green]#2. Le "temps de chargement" n'est pas lié à la longueur du mot de passe ou au téléchargement. L'attaquant force volontairement le serveur à faire une pause (ex: `sleep(5)`) SI la lettre qu'il teste est la bonne.#
+
+[green]#3. C'est lent parce qu'il faut poser une question pour **chaque lettre** (ex: "Est-ce un A ? Est-ce un B ?"). Pour un mot de passe de 8 caractères, il faut faire des centaines de requêtes, alors que UNION récupère tout en une seule fois.#

@@ -1,0 +1,273 @@
+= Sécurisation Web : Prolongements sur les Sessions et l'Autorisation
+:author: Timothée Robert
+:authorinitials: TR
+:toc: left
+:toc-title: Sommaire
+:icons: font
+:source-highlighter: rouge
+:imagesdir: images
+:sectnums:
+
+== Introduction : L'étape d'après
+
+Dans la séance précédente, nous avons vu comment **voler une session** (Session Hijacking). En résumé, nous avons volé le "badge" d'un administrateur pour entrer dans le bâtiment.
+
+Mais qu'en est-il si nous n'arrivons pas à voler ce badge ?
+Est-il possible d'entrer avec notre propre badge de "stagiaire" (utilisateur standard), mais de quand même accéder aux dossiers du directeur ?
+
+C'est tout l'enjeu de la distinction entre **Authentification** et **Autorisation**.
+
+== Le concept IDOR et le Bypass d'Autorisation
+
+=== Authentification vs Autorisation
+
+C'est une confusion classique, mais cruciale en cybersécurité :
+
+* **L'Authentification (AuthN) :** C'est vérifier l'identité.
+> _"Bonjour, je suis Timothée."_ -> _"Prouve-le (Mot de passe)."_ -> _"Ok, voici ton badge."_
+* **L'Autorisation (AuthZ) :** C'est vérifier les droits d'accès.
+> _"J'ai mon badge, je veux ouvrir le dossier RH."_ -> _"As-tu la permission ?"_
+
+Une faille **IDOR** (Insecure Direct Object Reference) survient quand le serveur vérifie l'Authentification (vous êtes connecté), mais oublie de vérifier si vous avez le droit de voir la ressource demandée.
+
+=== Le problème spécifique de notre cible
+
+Sur certaines applications mal codées, on peut changer `id=10` en `id=11` pour voir la facture du voisin.
+Cependant, sur la page que nous allons attaquer dans Mutillidae, le serveur effectue une double vérification : il demande le **Login** ET le **Mot de passe**.
+
+Si nous changeons juste le login (IDOR classique), le serveur dira : *"Erreur : le mot de passe ne correspond pas à ce login"*.
+Nous allons donc devoir utiliser une ruse (une Injection SQL) pour **forcer l'autorisation** et dire au serveur : *"Ne vérifie pas le mot de passe !"*.
+
+== Mise en pratique sur Mutillidae
+
+Nous allons démontrer qu'il est possible de voir les informations confidentielles de l'administrateur (mot de passe hashé, signature) en étant connecté simplement comme utilisateur standard, en contournant la vérification du mot de passe.
+
+=== Préparation
+
+1.  Assurez-vous que **Burp Suite** est lancé (Proxy Intercept OFF pour l'instant).
+2.  Accédez à Mutillidae.
+3.  Connectez-vous avec le compte **utilisateur1** (créé lors de la séance précédente).
+* *Si vous ne l'avez plus, créez un compte bidon (ex: `stagiaire` / `password`).*
+4.  Vérifiez que vous êtes bien connecté en tant qu'utilisateur standard.
+
+.Barre d'état confirmant l'identité standard
+image::idor-1-identity.png[Utilisateur standard connecté]
+
+=== Repérage de la cible
+
+Nous allons utiliser la page "User Info" qui affiche les détails d'un compte.
+
+1.  Dans le menu de Mutillidae, allez dans :
+* `OWASP 2017`
+* `A1 - Injection` (SQL Injection)
+* `Extract Data`
+* `User Info`
+2.  Une page s'affiche demandant un `Name` et un `Password`.
+
+[NOTE]
+====
+Cette page est conçue pour qu'un utilisateur puisse vérifier ses propres informations. Normalement, je ne devrais pouvoir consulter que *mon* profil en connaissant *mon* mot de passe.
+====
+
+=== L'Attaque (Le Bypass)
+
+**Scénario :** Je suis `utilisateur1`, je veux voir le profil de `admin`, mais je ne connais pas son mot de passe.
+
+1.  Remplissez le formulaire avec :
+* Name: `utilisateur1`
+* Password: (votre mot de passe)
+2.  Activez l'interception dans Burp (**Proxy** > **Intercept On**).
+3.  Cliquez sur "View Account Details".
+4.  Burp intercepte la requête. Repérez le paramètre `username=utilisateur1`.
+
+.Requête interceptée
+[source,http]
+----
+GET /index.php?page=user-info.php&username=utilisateur1&password=... HTTP/1.1
+----
+
+**L'Exploitation :**
+
+Si nous mettons juste `admin`, l'attaque échouera. Nous allons injecter un commentaire SQL pour annuler la vérification du mot de passe.
+
+5.  Dans Burp, remplacez `utilisateur1` par la chaîne suivante :
++
+`admin' -- -`
++
+*Explication du payload :*
+
+* `admin` : Le compte que l'on veut voir.
+* `'` : Ferme la chaîne de caractères dans la requête SQL du serveur.
+* `-- -` : (Tiret Tiret Espace Tiret) Ce sont des caractères de commentaire en SQL. Tout ce qui suit (notamment la vérification du mot de passe) sera ignoré par la base de données.
+
+6.  Laissez le champ password tel quel (il sera ignoré de toute façon).
+
+.Modification de la requête (Bypass)
+image::idor-2-burp.png[Modification username en admin' -- -]
+
+7.  Cliquez sur **Forward** pour envoyer la requête modifiée.
+8.  Regardez le résultat dans le navigateur.
+
+[WARNING]
+.Erreur fréquente : "Bad Request"
+====
+Si vous obtenez une erreur **400 Bad Request**, c'est que vous avez laissé des **espaces** dans l'URL.
+
+Dans le protocole HTTP, les espaces cassent la requête. Vous devez les encoder :
+* Remplacez les espaces par `+`
+* Remplacez `'` par `%27`
+
+**Mauvais :** `username=admin' -- -`
+**Bon :** `username=admin%27+%2d%2d+-`
+
+*Astuce Burp :* Sélectionnez votre texte et faites `CTRL + U` pour l'encoder automatiquement.
+====
+
+**Résultat attendu :**
+Le serveur n'a pas vérifié le mot de passe ! Il vous affiche le profil complet de l'administrateur.
+Vous voyez son `username`, son `password` (hashé), sa `Signature` ("g0t r00t?").
+
+.Succès : Données de l'admin affichées
+image::idor-3-success.png[Affichage des données admin]
+
+=== Variante sans Burp (Via URL)
+
+Cette attaque est aussi réalisable directement dans la barre d'adresse du navigateur, à condition d'encoder les caractères spéciaux (l'espace devient `+` ou `%20`, le quote devient `%27`).
+
+Essayez d'accéder directement à cette URL :
+`http://localhost/index.php?page=user-info.php&username=admin%27+--+-&user-info-php-submit-button=View+Account+Details`
+
+== Analyse et Remédiation
+
+=== Pourquoi cela a-t-il fonctionné ?
+
+Pour comprendre, regardons le code PHP vulnérable (simplifié) :
+
+[source,php]
+----
+$username = $_GET['username'];
+$password = $_GET['password'];
+
+// Requête vulnérable construite par concaténation
+$query = "SELECT * FROM accounts WHERE username = '$username' AND password = '$password'";
+----
+
+**En temps normal :**
+Si on envoie `admin`, la requête devient :
+`SELECT * FROM accounts WHERE username = 'admin' AND password = '...'` -> **FAUX** (mauvais mot de passe).
+
+**Avec notre attaque (`admin' -- -`) :**
+La requête devient :
+`SELECT * FROM accounts WHERE username = 'admin' -- -' AND password = '...'`
+
+En SQL, `--` signifie "Commentaire : ignore la suite de la ligne". La requête exécutée est donc simplement :
+`SELECT * FROM accounts WHERE username = 'admin'` -> **VRAI** !
+
+=== Comment corriger ?
+
+Le problème ici est double : une injection SQL et un manque de contrôle d'accès.
+
+**1. Correction de l'Injection (Prepared Statements)**
+Utiliser des requêtes préparées empêche l'attaquant de modifier la structure SQL (le `-- -` ne fonctionnerait plus).
+
+**2. Correction de l'Autorisation (Access Control)**
+Même si l'injection est corrigée, un utilisateur ne devrait pas pouvoir demander les infos d'un autre. Le code doit vérifier l'identité de la session :
+
+[source,php]
+----
+session_start();
+$requested_user = $_GET['username'];
+$current_user_session = $_SESSION['username'];
+
+// VÉRIFICATION D'AUTORISATION STRICTE
+if ($requested_user !== $current_user_session && $_SESSION['is_admin'] !== true) {
+    die("ACCÈS REFUSÉ : Vous ne pouvez consulter que votre propre profil.");
+}
+
+// Seulement ensuite, on exécute la requête...
+----
+
+=== Conclusion pour le pentest
+
+Ce TP montre que les vulnérabilités ne sont pas isolées. Ici, nous avons combiné :
+
+1.  Un défaut d'**Autorisation** (le serveur accepte de nous donner des infos admin).
+2.  Une **Injection SQL** (pour contourner le contrôle du mot de passe).
+
+C'est souvent en chaînant ces petites failles que les attaquants compromettent un système complet.
+
+== La Fixation de Session (Le Piège)
+
+=== Le Concept
+
+Dans le **Vol de Session** (Session Hijacking), l'attaquant doit espionner le réseau pour voler le cookie *après* la connexion.
+Dans la **Fixation de Session**, l'attaquant prend le problème à l'envers :
+
+1.  Il *choisit* un identifiant de session arbitraire (ex: `12345`).
+2.  Il piège la victime pour qu'elle se connecte en utilisant *cet* identifiant précis.
+3.  Une fois la victime connectée, l'attaquant (qui possède déjà le double des clés) rentre sans effraction.
+
+[NOTE]
+====
+Sur les serveurs modernes, envoyer un lien du type `?PHPSESSID=12345` est souvent bloqué par sécurité. Pour ce TP, nous allons simuler le piège manuellement en injectant le cookie via la console du navigateur.
+====
+
+=== Mise en pratique sur Mutillidae
+
+**Scénario :** Vous êtes l'attaquant. Vous allez forcer un administrateur (Victime) à utiliser votre ticket de session `12345`.
+
+**Matériel :**
+
+* **Navigateur A (Victime)** : Chrome, Edge ou Firefox.
+* **Navigateur B (Attaquant)** : Un autre navigateur (ou une fenêtre de Navigation Privée) pour simuler une machine différente.
+
+**Étape 1 : Le Piège (Côté Victime)**
+
+L'attaquant a réussi à piéger la victime (via une faille XSS ou un accès physique) pour fixer son cookie avant qu'elle ne se connecte.
+
+1.  Ouvrez le **Navigateur A (Victime)**.
+2.  Allez sur la page de Login de Mutillidae (ne vous connectez pas encore).
+3.  Ouvrez la Console de développement (**F12** > onglet **Console**).
+4.  Injectez le cookie piégé en tapant cette commande et en validant par Entrée :
++
+[source,javascript]
+----
+document.cookie="PHPSESSID=12345; path=/";
+----
++
+5.  Actualisez la page (F5). La victime navigue maintenant avec le badge `12345` sans le savoir.
+6.  Connectez-vous avec le compte **admin** (ou un autre compte).
+
+**Étape 2 : L'Exploitation (Côté Attaquant)**
+
+L'attaquant sait que la victime utilise le badge `12345`. Il n'a plus qu'à utiliser le même.
+
+1.  Ouvrez le **Navigateur B (Attaquant)**.
+2.  Allez sur la page d'accueil de Mutillidae. Vous n'êtes pas connecté.
+3.  Ouvrez la Console (**F12** > onglet **Console**).
+4.  Tapez la même commande pour utiliser le même badge :
++
+[source,javascript]
+----
+document.cookie="PHPSESSID=12345; path=/";
+----
++
+5.  **Actualisez la page (F5)**.
+
+**Résultat :**
+Vous êtes connecté en tant qu'**admin** !
+Le serveur a associé l'authentification de la victime au numéro `12345` que vous partagiez.
+
+=== Comment se protéger ? (Remédiation)
+
+Pour contrer cette attaque, une règle d'or s'impose aux développeurs : **La Régénération de l'ID**.
+
+Dès qu'un utilisateur change de niveau de privilège (se connecte), le serveur doit :
+
+1.  Détruire l'ancienne session (celle qui est potentiellement piégée).
+2.  En créer une toute nouvelle (aléatoire) et la donner à l'utilisateur.
+
+En PHP, cela se fait avec la commande : `session_regenerate_id(true);`.
+
+**Vérification :**
+Si vous passez Mutillidae en **Security Level 5** et que vous refaites la manipulation, l'attaque échoue. Au moment où la victime se connecte, le serveur change son ID (ex: `12345` devient `abcde...`). L'ID `12345` que possède l'attaquant ne vaut plus rien.

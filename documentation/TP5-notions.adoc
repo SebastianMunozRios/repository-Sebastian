@@ -1,0 +1,47 @@
+= Fiche de Révision : Vocabulaire Technique Avancé (Cybersécurité & SQL)
+:toc:
+:icons: font
+:source-highlighter: rouge
+
+Cette fiche compile les termes techniques de haut niveau utilisés lors des ateliers sur les injections SQL. La maîtrise de ce vocabulaire est indispensable pour l'analyse et la résolution d'incidents de sécurité.
+
+== 1. Logique et Raisonnement
+
+Tautologie / Vérité absolue::
+* **Définition :** En logique mathématique, une proposition qui est toujours vraie, quelle que soit la valeur de ses composants (ex: `1=1` ou `A=A`).
+* **Contexte SQLi :** Utilisée avec l'opérateur `OR`, elle force l'évaluation d'une clause `WHERE` à `TRUE`, annulant ainsi les restrictions de la requête originelle (ex: contournement d'authentification).
+* _Mentionné par : Luc Zhang, Alkaim Chanfi, Marie-Dominique Dzalamou._
+
+Inférence (Attaque par tâtonnement)::
+* **Définition :** Opération logique consistant à déduire une information inconnue à partir de l'observation de conséquences indirectes.
+* **Contexte SQLi :** C'est le principe même de l'injection "Blind" (aveugle). L'attaquant pose des questions binaires (Vrai/Faux) et déduit chaque caractère du mot de passe en observant le comportement du serveur (temps de réponse, changement d'affichage).
+* _Mentionné par : Luc Zhang, Wardi Romani Philopatir, Gédéon Razafimanjato._
+
+Priorité des opérateurs::
+* **Définition :** Règle déterminant l'ordre dans lequel les opérations logiques ou mathématiques sont évaluées par le processeur.
+* **Contexte SQLi :** En SQL, le `AND` est évalué avant le `OR`. Une injection non parenthésée comme `OR 1=1` redéfinit totalement la structure logique de la requête, rendant les filtres de sécurité inopérants.
+* _Mentionné par : Alkaim Chanfi._
+
+== 2. Mécanismes d'Exécution et Sécurité
+
+Pré-compilation (Prepared Statements)::
+* **Définition :** Processus par lequel le moteur de base de données analyse, optimise et verrouille le plan d'exécution d'une requête SQL *avant* d'y insérer les données de l'utilisateur.
+* **Contexte SQLi :** C'est la parade absolue contre les injections. Puisque la structure est verrouillée lors de la pré-compilation, la donnée fournie ensuite ne pourra jamais être interprétée comme une commande, coupant court à toute tentative de piratage.
+* _Mentionné par : Luc Zhang, Alex Xu, Alkaim Chanfi._
+
+Littéral / Chaîne de caractères brute::
+* **Définition :** En programmation, une valeur représentée directement dans le code source (ex: la chaîne `"bonjour"` ou le chiffre `42`), par opposition à une variable ou une instruction évaluée.
+* **Contexte SQLi :** Grâce à la pré-compilation, une tentative d'injection comme `' OR 1=1--` est traitée par le serveur comme un simple littéral (du texte inoffensif) et non comme une instruction exécutable.
+* _Mentionné par : Luc Zhang._
+
+== 3. Conséquences et Impact
+
+Effet de bord (Side Effect)::
+* **Définition :** Modification d'un état du système qui se produit en dehors de l'objectif principal d'une fonction ou d'une instruction.
+* **Contexte SQLi :** L'injection d'une condition toujours vraie modifie l'état logique de la requête. L'effet de bord est l'annulation des clauses de sécurité (filtres d'affichage, vérification du mot de passe) prévues par le développeur.
+* _Mentionné par : Gédéon Razafimanjato._
+
+Exfiltration::
+* **Définition :** Dans le domaine de la cybersécurité, transfert non autorisé de données sensibles hors d'un système d'information cible (vol de données).
+* **Contexte SQLi :** L'attaque `UNION` est une méthode d'exfiltration directe, permettant de faire sortir les données de la base en les affichant illégitimement sur la page web.
+* _Mentionné par : Gédéon Razafimanjato, Mathis Trusgnach._

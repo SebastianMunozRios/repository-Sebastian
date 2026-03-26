@@ -1,0 +1,104 @@
+= Compte-rendu de TP : Exploitation de failles Cross-Site Scripting (XSS) (Alex XU)
+:icons: font
+:toc: left
+:toc-title: Sommaire
+:imagesdir: ./imgaxu
+:source-highlighter: rouge
+
+== 1. Comparaison : Reflected vs Stored (Lab 1 & 2)
+
+*Question : Quelle est la différence majeure de dangerosité ? Quelle méthode est la plus efficace pour piéger un administrateur sans soupçons ?*
+
+*Réponse d'Alex XU :*
+_La différence réside principalement dans la **durée** et la **portée** de l'attaque :_
+* _**Reflected (Lab 1)** : Le code malveillant ne fonctionne que pour la personne qui clique sur un lien précis que vous lui envoyez. S'il ne clique pas, rien ne se passe._
+* _**Stored (Lab 2)** : Le code est enregistré directement sur le site. Il s'exécute automatiquement pour chaque personne qui visite la page, sans avoir besoin de leur envoyer de lien._
+
+[TIP]
+====
+_**La méthode la plus efficace :** Pour piéger un administrateur, le **Stored XSS (Lab 2)** est idéal. Le code étant intégré au site, l'administrateur le déclenche simplement en consultant la page normalement, ce qui ne génère aucun soupçon._
+====
+
+image::Lab1.png[Reflected XSS, 600, align="center"]
+image::Lab2.png[Stored XSS, 600, align="center"]
+
+[green]#**Correction / Commentaire :**#
+[green]#**Excellent.** La distinction entre la nature éphémère du Reflected et la persistance du Stored est parfaitement maîtrisée. Le scénario d'attaque ciblant l'administrateur est très réaliste.#
+
+
+
+== 2. Contexte d’attribut (Lab 3)
+
+*Question : Pourquoi <script>alert(1)</script> échoue-t-il ici ?*
+
+*Réponse d'Alex XU :*
+
+* _**Blocage serveur** : Le site ne laisse pas passer les signes `<` et `>`. Le serveur les transforme en codes de texte inoffensifs (encodage)._
+* _**Réaction du navigateur** : Le navigateur reçoit ces signes modifiés et les traite comme du texte simple à afficher, et non comme une instruction._
+* _**Résultat technique** : Puisqu'il ne reconnaît pas de balise ouvrante ou fermante, le moteur de script n'est pas activé. Le code reste "inerte". On cherche alors à injecter une instruction dans une balise existante._
+
+image::Lab3.png[Attribute Context, 600, align="center"]
+
+[green]#**Correction / Commentaire :**#
+[green]#**Parfait.** Le processus d'encodage (transformation en entités HTML) et son impact sur le moteur de rendu du navigateur sont expliqués avec une grande clarté.#
+
+
+
+== 3. Syntaxe JavaScript (Lab 4)
+
+*Question : Quel est le rôle de chaque partie du payload `'; alert(1); //` ?*
+
+*Réponse d'Alex XU :*
+_Lors d'une injection dans un script existant, chaque symbole permet de détourner le code sans l'interrompre :_
+
+* _` ' ` **(Guillemet simple)** : Sert à fermer la zone de texte commencée par le site pour transformer la suite en instruction._
+* _` ; ` **(Point-virgule)** : Sépare deux ordres différents. Il finit la première instruction pour lancer l'ordre suivant._
+* _` // ` **(Doubles barres)** : Annule tout ce qui suit sur la même ligne en le transformant en commentaire invisible, évitant ainsi une erreur de lecture._
+
+image::Lab4.png[JS String Breakout, 600, align="center"]
+
+[green]#**Correction / Commentaire :**#
+[green]#**Très bien.** C'est la mécanique exacte de l'évasion de contexte JavaScript. "Éviter une erreur de lecture" (SyntaxError) est effectivement le but de la mise en commentaire finale.#
+
+
+== 4. Cas du DOM XSS et Pare-feu (Lab 5)
+
+*Question : Pourquoi un pare-feu (WAF) a-t-il du mal à détecter cette faille ?*
+
+*Réponse d'Alex XU :*
+
+* _**Lieu de l'exécution** : Contrairement aux failles classiques, le code malveillant reste exclusivement dans votre navigateur. C'est votre propre ordinateur qui lit l'adresse de la page et décide d'écrire le code sur l'écran._
+* _**Invisibilité pour le WAF** : Le serveur ne reçoit jamais la partie de l'adresse contenant l'attaque._
+* _**Conclusion** : Le pare-feu examine ce qui entre et sort du serveur. Comme l'attaque se déroule entièrement dans la navigation locale sans franchir la porte du serveur, le pare-feu n'a aucune information à vérifier._
+
+image::Lab5.png[DOM XSS, 600, align="center"]
+
+[green]#**Correction / Commentaire :**#
+[green]#**Brillant.** Vous avez parfaitement mis en évidence la notion d'exécution locale (Client-Side). Le fait que la charge utile ne franchisse jamais "la porte du serveur" est l'argument technique clé.#
+
+
+---
+
+== 5. Remédiation : La règle d’or
+
+*Question : Si vous étiez développeur, quelle solution choisiriez-vous ?*
+
+*Réponse d'Alex XU :*
+_La solution absolue est d'**encoder (échapper) toutes les données affichées à l'écran**._
+
+[cols="1,2", options="header"]
+|===
+| Solution | Pourquoi ce choix ?
+
+| **Encodage**
+| Neutralise les signes `<` en `&lt;`. Le navigateur les affiche au lieu de les exécuter. C'est efficace partout (commentaires, recherches, attributs).
+
+| **Interdire "script"**
+| **Insuffisant.** Trop fragile. On peut déclencher des alertes via des événements comme `onmouseover` ou `onload` sans ce mot.
+
+| **Requêtes SQL**
+| **Inadapté.** Protège la base de données mais n'empêche pas l'exécution de scripts une fois affichés sur la page web.
+|===
+
+[green]#**Correction / Commentaire :**#
+[green]#**Réponse modèle.** L'utilisation du tableau croisé pour justifier la bonne solution tout en argumentant contre les mauvaises pratiques démontre un esprit de synthèse une utilisation pertinente des IA.#

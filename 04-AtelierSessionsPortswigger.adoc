@@ -1,0 +1,100 @@
+= Sécurisation Web : Atelier PortSwigger (Sessions & Authentification)
+:author: Timothée Robert
+:toc: left
+:toc-title: Sommaire
+:icons: font
+:source-highlighter: rouge
+:imagesdir: images
+:sectnums:
+
+== Introduction
+
+Jusqu'à présent, nous avons travaillé sur **Mutillidae**, une application volontairement vulnérable hébergée localement sur votre machine (Laragon).
+
+Aujourd'hui, nous passons à la vitesse supérieure en utilisant la **Web Security Academy** de PortSwigger.
+PortSwigger est l'éditeur du logiciel **Burp Suite**.
+Leurs laboratoires sont :
+
+1.  **Réalistes :** Ils simulent des applications modernes.
+2.  **Ciblés :** Chaque laboratoire isole une faille précise.
+3.  **En ligne :** Vous dispôsez chacun d'une instance (au sens de session Burpsuite ici) unique temporaire.
+
+=== Pré-requis obligatoire
+
+Avant de commencer, vous devez créer un compte (gratuit) sur la plateforme pour accéder aux laboratoires.
+
+* **Lien d'inscription :** https://portswigger.net/web-security
+* Utilisez une adresse email valide (validation requise).
+
+Une fois connecté, lancez **Burp Suite** et utilisez le navigateur intégré (**Proxy > Open Browser**) pour réaliser les exercices.
+
+== Les Laboratoires
+
+Vous devez réaliser les 3 challenges suivants dans l'ordre.
+Pour chaque challenge, l'objectif est de valider le laboratoire (un bandeau vert "Congratulations" apparaitra).
+
+=== Lab 1 : Manipulation de Cookie (Débutant)
+
+Ce laboratoire reprend le concept vu précédemment : ne jamais faire confiance aux données stockées chez le client.
+
+* **Titre :** User role controlled by request parameter
+* **Lien :** https://portswigger.net/web-security/access-control/lab-user-role-controlled-by-request-parameter
+* **Objectif :** Accéder au panneau d'administration (`/admin`) et supprimer l'utilisateur `carlos`.
+* **Indice :** Regardez les cookies après votre connexion.
+
+=== Lab 2 : Énumération de Logins (Débutant)
+
+Une application sécurisée doit répondre de manière générique ("Identifiant ou mot de passe incorrect"). Si le message ou le temps de réponse varie, un attaquant peut deviner quels logins existent.
+
+* **Titre :** Username enumeration via different responses
+* **Lien :** https://portswigger.net/web-security/authentication/password-based/lab-username-enumeration-via-different-responses
+* **Objectif :** Identifier le login valide parmi la liste fournie, puis trouver son mot de passe pour se connecter.
+* **Indice :** Utilisez **Burp Intruder**. Observez la longueur (Length) des réponses ou les messages d'erreur.
+
+=== Lab 3 : Analyse de Session (Intermédiaire)
+
+C'est le "Boss final" de la séance. Vous devez comprendre comment le site fabrique son cookie "Se souvenir de moi" (Stay Logged In) pour en forger un faux.
+
+* **Titre :** Brute-forcing a stay-logged-in cookie
+* **Lien :** https://portswigger.net/web-security/authentication/other-mechanisms/lab-brute-forcing-a-stay-logged-in-cookie
+* **Objectif :** Se connecter au compte de `carlos` sans connaitre son mot de passe, en prédisant son cookie.
+* **Indices :**
+1.  Connectez-vous avec `wiener` et analysez son cookie avec l'onglet **Decoder** (Base64).
+2.  Repérez le format `user:hash`. Quel est le type de hachage ? (MD5 ? SHA1 ?).
+3.  Configurez **Intruder** pour générer un cookie valide pour `carlos` en testant la liste de mots de passe.
+
+[WARNING]
+.Lenteur de l'attaque
+====
+La version gratuite de Burp Suite bride la vitesse de l'Intruder. Pour ce Lab 3, l'attaque peut prendre quelques minutes. Soyez patients !
+====
+
+<<<
+
+== Questions de Synthèse (Compte-rendu)
+
+En plus des captures d'écran prouvant la réussite des laboratoires, répondez aux questions suivantes dans votre compte-rendu :
+
+=== Sur le Lab 1 (Cookies)
+**Q1.** Pourquoi est-il dangereux de stocker un paramètre comme `Admin=false` directement dans un cookie, même si l'utilisateur ne peut pas le voir à l'écran ?
+
+**Q2.** Quelle aurait été la bonne méthode pour gérer les droits administrateur côté serveur (PHP/Base de données) ?
+
+=== Sur le Lab 2 (Énumération)
+**Q3.** Dans l'attaque Intruder, quel élément technique précis vous a permis de distinguer le bon login des mauvais (Code HTTP ? Taille en octets ? Temps de réponse ?) ?
+
+**Q4.** Quelle "Bonne Pratique" de développement (vue en cours) permettrait d'empêcher cette attaque ?
+
+=== Sur le Lab 3 (Session)
+**Q5.** Quelle était la structure exacte du cookie décodé ? (Exemple : `Login + Date`, `Login + Hash`, etc.).
+
+**Q6.** Pourquoi l'utilisation de l'algorithme **MD5** pour hasher le mot de passe dans le cookie est-elle une faiblesse critique aujourd'hui ?
+
+**Q7.** Si le développeur avait utilisé un "Grain de sel" (Salt) aléatoire inconnu de l'attaquant pour générer le hash, l'attaque aurait-elle fonctionné ? Justifiez.
+
+== Rendu attendu
+
+Déposez dans le répertoire du jour un document Word avec votre nom dedans et :
+
+1.  Les preuves de réussite (Screenshots du message "Congratulations").
+2.  Les réponses argumentées aux 7 questions de synthèse.

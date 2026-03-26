@@ -1,0 +1,65 @@
+= Correction TP4 : Compte rendu (Mylan)
+:author: Correction Enseignant
+:toc: left
+:icons: font
+:source-highlighter: rouge
+:imagesdir: images
+
+== Lab 1 : Manipulation de cookie
+
+image::images/reussi1.png[Preuve Lab 1]
+
+=== Q1. Pourquoi est-il dangereux de stocker un paramètre comme Admin=false directement dans un cookie, même si l’utilisateur ne peut pas le voir à l’écran ?
+
+*Réponse de Mylan Patisson :*
+_C'est facilement modifiable en visualisant le cookie avec la touche F12_
+
+[green]#**Correction / Commentaire :**#
+[green]#C'est exact. Le point clé est que le stockage côté client (Client-Side) est sous le contrôle total de l'utilisateur. N'importe qui peut modifier cette valeur pour s'octroyer des droits qu'il ne devrait pas avoir.#
+
+=== [green]#Q2. Quelle aurait été la bonne méthode pour gérer les droits administrateur côté serveur ?#
+
+[green]#**Correction (Non répondu) :**#
+[green]#Le serveur ne doit stocker qu'un identifiant de session opaque (ex: PHPSESSID) côté client. Les rôles et permissions (Admin ou User) doivent être stockés dans la **Base de Données** du serveur et vérifiés à chaque requête associée à cet ID de session.#
+
+== Lab 2 : Énumération de login
+
+image::images/img_1.png[Preuve Lab 2]
+
+=== Q3. Quel élément technique précis vous a permis de distinguer le bon login des mauvais ?
+
+*Réponse de Mylan Patisson :*
+_Ce qui m'a permis de distinguer le bon login du mauvais et le la longueur(lenght) des différents login présents dans le dictionnaire, pour ma part ils étaient tous à 3248 à part un seul qui lui avait une longueur de 3250._
+
+[green]#**Correction / Commentaire :**#
+[green]#Très bien observé. C'est effectivement la variation de la taille de la réponse (Length) qui trahit la présence du login, souvent due à un message d'erreur subtilement différent (ex: "Invalid username" vs "Incorrect password").#
+
+=== Q4. Quelle "Bonne Pratique" de développement permettrait d'empêcher cette attaque ?
+
+*Réponse de Mylan Patisson :*
+_C'est de hasher le login et mdp et d'installer un salt dans le code , détruisant ainsi la possibilité d'utiliser des logins provenant de rainbow table_
+
+[green]#**Correction / Commentaire :**#
+[green]#Attention, confusion ! Le hachage et le salage (Salt) servent à sécuriser le stockage des mots de passe en base de données en cas de vol, mais cela n'empêche pas l'énumération des logins.#
+
+[green]#Pour empêcher l'énumération, il faut utiliser des **Messages d'erreur génériques**. L'application doit répondre "Identifiant ou mot de passe incorrect" dans tous les cas, sans préciser si c'est le login ou le mot de passe qui est faux.#
+
+== [green]#Lab 3 : Analyse de Session (Non traité)#
+
+[green]#Mylan Patisson n'a pas fourni de réponses pour ce laboratoire.#
+
+=== [green]#Q5. Quelle était la structure exacte du cookie décodé ?#
+
+[green]#**Correction :**#
+[green]#Le cookie était une chaîne encodée en Base64. Une fois décodée, sa structure était : `username:md5(password)`.#
+[green]#Exemple : `wiener:51dc30ddc473d43a6011e9ebba6ca770`#
+
+=== [green]#Q6. Pourquoi l'utilisation de l'algorithme MD5 pour hasher le mot de passe dans le cookie est-elle une faiblesse critique aujourd'hui ?#
+
+[green]#**Correction :**#
+[green]#MD5 est un algorithme obsolète et beaucoup trop rapide. Un attaquant peut tester des milliards de combinaisons par seconde ou utiliser des "Rainbow Tables" (tables pré-calculées) pour retrouver le mot de passe original à partir du hash instantanément.#
+
+=== [green]#Q7. Si le développeur avait utilisé un "Grain de sel" (Salt) aléatoire inconnu de l'attaquant, l'attaque aurait-elle fonctionné ?#
+
+[green]#**Correction :**#
+[green]#Non. Si le serveur ajoute un secret (Salt) au mot de passe avant de le hasher (`MD5(password + salt)`), l'attaquant ne peut pas prédire le hash final car il ne connait pas le Salt. Il devient donc impossible de forger un cookie valide pour la victime.#

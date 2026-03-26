@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Tableau de bord - Victimes</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f0f8ff; color: #333; margin: 40px; }
+        h1 { color: #0056b3; }
+        .module { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        ul { list-style-type: none; padding: 0; }
+        li { margin: 10px 0; }
+        a { text-decoration: none; color: #0056b3; font-weight: bold; padding: 5px 10px; border: 1px solid #0056b3; border-radius: 4px; display: inline-block;}
+        a:hover { background-color: #0056b3; color: white; }
+    </style>
+</head>
+<body>
+
+<h1>👨‍💼 Espace Victimes (Cibles)</h1>
+<p><strong>Étape 1 :</strong> Ouvrez les applications ci-dessous et connectez-vous pour simuler une session active.</p>
+
+<div class="module">
+    <h2>Scénario 1 : Modification de profil</h2>
+    <ul>
+        <li><a href="modification/victime_noprotection/login.php" target="_blank">1. Application SANS protection (Login)</a></li>
+        <li><a href="modification/victime_synchronizer/login.php" target="_blank">2. Application avec Synchronizer Token (Login)</a></li>
+        <li><a href="modification/victime_double_submit/login.php" target="_blank">3. Application avec Double Submit (Login)</a></li>
+    </ul>
+</div>
+
+<div class="module">
+    <h2>Scénario 2 : Suppression de compte (Lama Zoo)</h2>
+    <ul>
+        <li><a href="suppression/victime_noprotection/login.php" target="_blank">1. Application SANS protection (Login)</a></li>
+        <li><a href="suppression/victime_synchronizer/login.php" target="_blank">2. Application avec Synchronizer Token (Login)</a></li>
+        <li><a href="suppression/victime_double_submit/login.php" target="_blank">3. Application avec Double Submit (Login)</a></li>
+    </ul>
+</div>
+
+</body>
+</html>

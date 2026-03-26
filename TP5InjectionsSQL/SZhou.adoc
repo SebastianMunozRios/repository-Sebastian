@@ -1,0 +1,67 @@
+= Compte rendu de TP : BLOC 3 05-Atelier Injections (SQL & XSS)
+:author: ZHOU Steeve
+:toc: left
+:imagesdir: imgszhou
+:icons: font
+:source-highlighter: rouge
+
+== Challenges
+
+=== 2.1 Lab 1
+image::captures1.png[Capture Challenge 1]
+
+=== 2.2 Lab 2
+image::captures2.png[Capture Challenge 2]
+
+=== 2.3 Lab 3
+image::captures3.png[Capture Challenge 3]
+
+=== 2.4 Lab 4
+image::captures4.png[Capture Challenge 4]
+
+---
+
+== Réponses aux questions
+
+=== Q1. Dans le Lab 1, pourquoi l’ajout de OR 1=1 permet-il d’afficher des données qui étaient censées être cachées ? Expliquez la logique booléenne.
+
+*Réponse de Steeve Zhou :*
+_L'ajout de OR 1=1 crée une condition toujours vraie en logique booléenne, ce qui annule le filtrage du mot de passe et force la base de données à renvoyer toutes les lignes de la table._
+
+[green]#**Correction / Commentaire :**#
+[green]#**L'explication logique est parfaite, mais attention au contexte !**
+Le Lab 1 ne concerne pas un filtrage de *mot de passe*, mais un filtrage de *produits cachés* (la clause `AND released = 1`). Vous avez confondu le contexte du Lab 1 avec celui du Lab 2. Sur le fond technique (la tautologie booléenne), c'est tout à fait juste.#
+
+=== Q2. Dans le Lab 2, quel est le rôle précis des caractères -- (ou # selon la base de données) à la fin de votre injection ? Pourquoi cela permet-il de se passer du mot de passe ?
+
+*Réponse de Steeve Zhou :*
+_Les caractères -- ou # signalent le début d'un commentaire SQL, ce qui oblige la base de données à ignorer tout le code qui suit, notamment la vérification du mot de passe, permettant ainsi une connexion sans le connaître._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Parfait.** C'est concis, précis et ça va droit au but. La neutralisation de la fin de la requête est très bien expliquée.#
+
+=== Q3. Dans le Lab 3 (UNION), pourquoi est-il obligatoire de connaître le nombre exact de colonnes avant de pouvoir extraire des données ? Que se passe-t-il si les deux requêtes n’ont pas la même structure ?
+
+*Réponse de Steeve Zhou :*
+_L'opérateur UNION sert à fusionner deux tableaux de résultats, il est donc techniquement obligatoire que les deux requêtes aient exactement le même nombre de colonnes et des types de données compatibles pour que la fusion fonctionne sans erreur._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Excellent.** Vous n'avez pas oublié la contrainte des "types de données compatibles", ce qui dénote une vraie rigueur technique sur le fonctionnement d'une base de données relationnelle.#
+
+
+
+=== Q4. Quelle est la meilleure méthode de protection (côté code PHP/Java/C#) pour empêcher totalement les injections SQL, rendant les caractères comme ' ou OR inefficaces ?
+
+*Réponse de Steeve Zhou :*
+_La méthode de protection la plus efficace est l'utilisation de requêtes préparées (Prepared Statements), car elles séparent la structure SQL des données utilisateur, traitant ainsi les caractères spéciaux comme du simple texte et non comme du code exécutable._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Réponse modèle.** Vous avez parfaitement défini le principe de la pré-compilation : la stricte séparation entre la logique (la requête) et la donnée (le littéral texte).#
+
+=== Q5. Dans une injection SQL "Blind" (Aveugle), l’attaquant ne voit jamais les données s’afficher à l’écran. Comment fait-il alors pour voler un mot de passe entier ? Pourquoi cette technique est-elle beaucoup plus lente qu’une injection UNION classique ?
+
+*Réponse de Steeve Zhou :*
+_Dans une injection Blind, l'attaquant ne voit pas les données et doit les deviner caractère par caractère en posant des questions de type Vrai/Faux au serveur (comme au jeu du pendu) ; c'est beaucoup plus lent car cela nécessite d'envoyer des milliers de requêtes au lieu d'une seule._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Brillant.** L'analogie avec le jeu du pendu est pédagogiquement excellente pour illustrer l'attaque par inférence. C'est exactement la logique derrière les attaques booléennes à l'aveugle.#

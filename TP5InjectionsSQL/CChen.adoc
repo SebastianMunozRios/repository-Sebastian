@@ -1,0 +1,70 @@
+= Réponses au Questionnaire : Cédric Chen
+:toc: left
+:toclevels: 2
+:sectnums:
+:icons: font
+:source-highlighter: rouge
+:imagesdir: imgcchen
+
+== Question 1
+
+Dans le Lab 1, pourquoi l’ajout de OR 1=1 permet-il d’afficher des données qui étaient censées être cachées ? Expliquez la logique booléenne.
+
+*Réponse de Cédric Chen :*
+_Parce que OR veut dire que soit 1=1 donc si c'est le cas alors il affiche toutes des données_
+
+image::Capture d'écran 2026-02-12 143155.png[Capture Q1]
+
+[green]#**Correction / Commentaire :**#
+[green]#C'est l'idée, mais l'explication est un peu maladroite. En logique, `1=1` est une **tautologie** (une vérité absolue).#
+
+[green]#L'injection fonctionne car la condition `OR VRAI` rend l'ensemble de la requête vraie, ce qui force la base de données à ignorer le filtre qui cachait les produits non publiés.#
+
+== Question 2
+
+Dans le Lab 2, quel est le rôle précis des caractères -- (ou # selon la base de données) à la fin de votre injection ? Pourquoi cela permet-il de se passer du mot de passe ?
+
+*Réponse de Cédric Chen :*
+_les caractères "--" il signifie qu'on saute l'étape de Mot de passe_
+
+image::Capture d'écran 2026-02-12 143706.png[Capture Q2]
+
+[green]#**Correction / Commentaire :**#
+[green]#Attention au vocabulaire technique : on ne "saute" pas une étape, on la **commente**.#
+
+[green]#Les caractères `--` sont des marqueurs de commentaire SQL. Ils disent à la base de données : "Ignore tout le texte qui suit sur cette ligne". Comme la vérification du mot de passe (`AND password=...`) est située après, elle est ignorée.#
+
+== Question 3
+
+Dans le Lab 3 (UNION), pourquoi est-il obligatoire de connaître le nombre exact de colonnes avant de pouvoir extraire des données ? Que se passe-t-il si les deux requêtes n’ont pas la même structure ?
+
+*Réponse de Cédric Chen :*
+_Si on ne connait pas le nombre de colonne et que les 2 strusture sont différent alors il va pas le resultat qu'il faut_
+
+image::Capture d'écran 2026-02-12 150205.png[Capture Q3]
+
+[green]#**Correction / Commentaire :**#
+[green]#C'est trop vague. Ce n'est pas juste "pas le résultat qu'il faut", c'est une **Erreur Critique** (Internal Server Error).#
+[green]#La commande `UNION` exige strictement que les deux tableaux fusionnés aient le même nombre de colonnes et des types de données compatibles. Sinon, le moteur SQL refuse d'exécuter la requête.
+Attention à l'orthographe.#
+
+== Question 4
+
+Quelle est la meilleure méthode de protection (côté code PHP/Java/C#) pour empêcher totalement les injections SQL, rendant les caractères comme ' ou OR inefficaces ?
+
+*Réponse de Cédric Chen :*
+_La meilleure requête c'est les requête préparer_
+
+image::Capture d'écran 2026-02-12 154456.png[Capture Q4]
+
+[green]#**Correction / Commentaire :**#
+[green]#Réponse valide : **Requêtes Préparées** (Prepared Statements).#
+[green]#Elles fonctionnent en séparant le code SQL (la commande) de la donnée fournie par l'utilisateur, empêchant ainsi l'interprétation des caractères spéciaux.#
+
+=== [green]#Question 5 (Non traitée)#
+
+[green]#**Question :** Dans une injection SQL "Blind" (Aveugle), l'attaquant ne voit jamais les données. Comment fait-il pour voler un mot de passe ? Pourquoi est-ce lent ?#
+
+[green]#**Correction :**#
+[green]#L'attaquant pose des questions VRAI/FAUX à la base de données (ex: "La première lettre est-elle A ?"). Il déduit la réponse selon que la page change ou met du temps à répondre.#
+[green]#C'est lent car il faut faire des centaines de requêtes pour deviner le mot de passe lettre par lettre, contrairement au `UNION` qui affiche tout d'un coup.#

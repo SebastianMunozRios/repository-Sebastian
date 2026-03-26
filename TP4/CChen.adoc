@@ -1,0 +1,80 @@
+= Compte rendu TP4 : Cédric Chen
+:toc: left
+:toc-title: Sommaire
+:icons: font
+:source-highlighter: rouge
+:imagesdir: imgchen
+
+== Question 1
+
+Pourquoi est-il dangereux de stocker un paramètre comme Admin=false directement dans un cookie, même si l’utilisateur ne peut pas le voir à l’écran ?
+
+*Réponse de Cédric Chen :*
+_Parce qu'on pourrait utiliser admin=false et on change par admin=true il va permet d'avoir l'accès au panneau d'administrateur._
+
+image::Capture d'écran 2026-02-05 144209.png[Capture écran Q1]
+
+[green]#**Correction / Commentaire :**#
+[green]#C'est le principe de l'attaque, en effet. Mais la raison fondamentale pour laquelle c'est dangereux, c'est que le cookie est stocké **côté client**. Le serveur ne doit jamais faire confiance à une donnée stockée chez l'utilisateur, car celui-ci a un contrôle total dessus et peut la modifier.#
+
+== Question 2
+
+Quelle aurait été la bonne méthode pour gérer les droits administrateur côté serveur (PHP/Base de données) ?
+
+*Réponse de Cédric Chen :*
+_Les mots de passer soit asher pour qu'on trouve pas les Mots de passes_
+
+[green]#**Correction / Commentaire :**#
+[green]#Attention, réponse hors sujet. Hacher les mots de passe est une bonne pratique pour le stockage, mais cela ne répond pas à la question de la gestion des droits "Admin".#
+[green]#La bonne méthode est d'utiliser une **Session** côté serveur. Le cookie ne contient qu'un ID aléatoire. Le rôle (Admin ou User) est stocké dans la base de données du serveur et vérifié à chaque page. Ainsi, l'utilisateur ne peut rien modifier.#
+
+== Question 3
+
+Dans l’attaque Intruder, quel élément technique précis vous a permis de distinguer le bon login des mauvais (Code HTTP ? Taille en octets ? Temps de réponse ?) ?
+
+*Réponse de Cédric Chen :*
+_L'élément qui m'a permis de trouver est la taille en octet et le status code_
+
+image::Capture d'écran 2026-02-05 154232.png[Capture écran Q3-1]
+image::Capture d'écran 2026-02-05 155142.png[Capture écran Q3-2]
+
+[green]#**Correction / Commentaire :**#
+[green]#C'est correct. Pour être précis : la **Taille (Length)** varie souvent pour l'énumération des logins (car le message d'erreur change légèrement), et le **Code Statut (302)** indique souvent une connexion réussie (le mot de passe est bon).#
+
+=== Question 4
+
+Quelle "Bonne Pratique" de développement (vue en cours) permettrait d’empêcher cette attaque ?
+
+[green]#**Correction (Non répondu) :**#
+[green]#Pour empêcher l'énumération, il faut utiliser des **messages d'erreur génériques** (ex: "Identifiant ou mot de passe incorrect"). Ainsi, la réponse du serveur a toujours la même taille, que le compte existe ou non.#
+
+=== Question 5
+
+Quelle était la structure exacte du cookie décodé ? (Exemple : Login + Date, Login + Hash, etc.).
+
+[green]#**Correction (Non répondu) :**#
+[green]#La structure du cookie décodé (Base64) était : `username:MD5(password)`.#
+
+== Question 6
+
+Pourquoi l’utilisation de l’algorithme MD5 pour hasher le mot de passe dans le cookie est-elle une faiblesse critique aujourd’hui ?
+
+[green]#**Correction (Non répondu) :**#
+[green]#MD5 est un algorithme obsolète car beaucoup trop rapide. Un attaquant peut tester des milliards de combinaisons par seconde pour casser le hash, ou utiliser des tables pré-calculées (Rainbow Tables).#
+
+=== Question 7
+
+Si le développeur avait utilisé un "Grain de sel" (Salt) aléatoire inconnu de l’attaquant pour générer le hash, l’attaque aurait-elle fonctionné ? Justifiez.
+
+[green]#**Correction (Non répondu) :**#
+[green]#Non, l'attaque aurait échoué. Le sel est un secret ajouté au mot de passe avant le hachage. Sans connaitre ce sel, l'attaquant ne peut pas pré-calculer le hash valide pour forger le cookie, même s'il devine le mot de passe.#
+
+== Conclusion
+
+Ce compte rendu synthétise les réponses aux différentes questions posées et permet de documenter le travail réalisé au sein du projet.
+
+== Références
+
+* Lien GitHub :
+* Documentation officielle :
+* Autres sources :

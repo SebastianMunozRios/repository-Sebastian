@@ -1,0 +1,89 @@
+= Compte-rendu de Challenge Cybersécurité : Gedeon Razafimanjato
+:author: Gedeon Razafimanjato
+:toc: left
+:imagesdir: imggedeon
+:icons: font
+:source-highlighter: rouge
+
+== Challenges
+
+=== Challenge 1
+image::Labo1.png[Challenge 1]
+
+=== Challenge 2
+image::Labo2.png[Challenge 2]
+
+=== Challenge 3
+image::Labo3.png[Challenge 3]
+
+=== Challenge 4
+image::Labo4.png[Challenge 4]
+
+---
+
+== Compte-rendu des Questions
+
+Q1 (Stockage Client) : L'utilisation de cookies modifiables côté client permet à un attaquant d'usurper des privilèges (ex: passer admin à true) via Burp Suite.
+
+[green]#**Correction / Commentaire :**#
+[green]#Synthèse parfaite. Le risque est bien identifié (modification client-side).#
+
+Q2 (Sessions Serveur) : La sécurité repose sur le stockage des rôles dans des variables de session côté serveur, vérifiées par des conditions logiques avant tout accès sensible.
+
+[green]#**Correction / Commentaire :**#
+[green]#Exact. C'est le principe de la sécurité "Stateful" (avec état sur le serveur).#
+
+Q3 (Analyse Burp) : Une authentification réussie se détecte par une variation de la longueur (Length) de la réponse HTTP, la distinguant des échecs aux contenus identiques.
+
+[green]#**Correction / Commentaire :**#
+[green]#Très bien résumé.#
+
+Q4 (Injections SQL) : L'exploitation des clauses WHERE et des opérateurs UNION permet de contourner les filtres et d'exfiltrer directement les identifiants de la base de données.
+
+[green]#**Correction / Commentaire :**#
+[green]#Correct.#
+
+---
+
+== Questions de Synthèse (Compte-rendu)
+
+=== Q1. Logique du OR 1=1
+
+*Réponse de Gedeon Razafimanjato :*
+_L'expression 1=1 étant toujours vraie, elle rend toute la condition WHERE vraie par effet de bord. Cela force la base de données à ignorer les filtres de sécurité et à afficher l'intégralité des enregistrements de la table._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Excellent.** L'expression "par effet de bord" est très bien choisie. Vous décrivez parfaitement le mécanisme de la tautologie.
+Attention que l'expression effet de bord est très technique, si vous l'employez il vous faudra être capable de la définir et préciser des cas d'utilisation par la suite ...#
+
+=== Q2. Rôle des commentaires (-- ou #)
+
+*Réponse de Gedeon Razafimanjato :*
+_Ces caractères servent à "couper" la requête en ignorant tout ce qui suit. Cela permet d'éliminer la vérification du mot de passe dans le code SQL, validant la connexion dès que l'identifiant est reconnu._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Parfait.** C'est concis et techniquement juste.#
+
+=== Q3. Structure de l'UNION
+
+*Réponse de Gedeon Razafimanjato :*
+_L'opérateur UNION exige que les deux requêtes fusionnées possèdent exactement le même nombre de colonnes et des types compatibles. Si la structure diffère, la base de données génère une erreur et refuse d'afficher les données détournées._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Très bien.** Vous avez pensé à mentionner les "types compatibles" (Data Types), ce qui montre une compréhension fine du moteur SQL. Il faudra également être capable de répondre si on vous redemande quels sont ces différents types de données SQL ? #
+
+=== Q4. Meilleure méthode de protection
+
+*Réponse de Gedeon Razafimanjato :*
+_La solution absolue est l'utilisation de requêtes préparées (Prepared Statements). Elles séparent strictement le code SQL des données utilisateur, empêchant ces dernières d'être interprétées comme des commandes, même si elles contiennent des guillemets ou des mots-clés._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Réponse modèle.** La distinction "Code vs Données" est l'argument clé.#
+
+=== Q5. Injection Blind (Aveugle)
+
+*Réponse de Gedeon Razafimanjato :*
+_L'attaquant procède par élimination en posant des questions "Vrai/Faux" au serveur (ex: "Le premier caractère est-il 'A' ?") et observe la réponse de la page. C'est beaucoup plus lent car il faut extraire chaque lettre une par une via des centaines de requêtes successives._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Excellent.** Vous avez très bien synthétisé : la méthode (élimination/inférence) et la cause de la lenteur (volume de requêtes).#

@@ -1,0 +1,62 @@
+= Correction TP4 : Compte rendu (Sebastian Munoz)
+:author: Correction Enseignant
+:toc: left
+:icons: font
+:source-highlighter: rouge
+:imagesdir: images
+
+== Lab 1 : Manipulation de Cookie
+
+=== Q1. Pourquoi est-il dangereux de stocker un paramètre comme Admin=false directement dans un cookie, même si l’utilisateur ne peut pas le voir à l’écran ?
+
+*Réponse de Sebastian Munoz :*
+_Il est dangereux de stocker un paramètre tel que Admin=false dans un cookie, car les cookies sont stockés côté client et peuvent être facilement modifiés par l’utilisateur à l’aide des outils du navigateur ou d’un proxy (Burp Suite). Même si l’utilisateur ne voit pas ce paramètre à l’écran, il peut le falsifier et tromper le serveur. Si le serveur se base uniquement sur la valeur du cookie pour accorder des privilèges, cela permet à un attaquant d’obtenir un accès administrateur non autorisé._
+
+[green]#**Correction / Commentaire :**#
+[green]#C'est une excellente réponse, très complète. Vous avez parfaitement identifié les trois points clés : le stockage côté client, la facilité de modification via des outils tiers, et le problème de confiance du serveur.#
+
+=== Q2. Quelle aurait été la bonne méthode pour gérer les droits administrateur côté serveur (PHP/Base de données) ?
+
+*Réponse de Sebastian Munoz :*
+_La bonne méthode aurait été de gérer les droits administrateur exclusivement côté serveur en stockant le rôle de l’utilisateur dans la base de données. Le cookie ne devrait contenir qu’un identifiant de session, utilisé par le serveur pour retrouver l’utilisateur et vérifier ses droits à chaque requête sensible. Ainsi, même si un utilisateur modifie ses cookies, le serveur ne lui accorde des privilèges administrateur que si la base de données confirme qu’il est réellement administrateur._
+
+[green]#**Correction / Commentaire :**#
+[green]#Réponse parfaite. Le mécanisme de session (Cookie ID -> Vérification BDD -> Rôle) est parfaitement compris.#
+
+== Lab 2 : Énumération de login
+
+=== Q3. Dans l’attaque Intruder, quel élément technique précis vous a permis de distinguer le bon login des mauvais ?
+
+*Réponse de Sebastian Munoz :*
+_Dans l’attaque Intruder, c’est la "différence de taille des réponses (longueur en octets)" qui a permis d’identifier le bon nom d’utilisateur, car la réponse indiquant « Incorrect password » était plus longue que celles indiquant "« Invalid username »". Ensuite, lors de la force brute du mot de passe, le "code HTTP 302" a permis d’identifier la bonne combinaison, car il indiquait une connexion réussie contrairement aux réponses en 200._
+
+[green]#**Correction / Commentaire :**#
+[green]#Très bonne analyse technique. Vous avez bien fait la distinction entre la phase d'énumération (basée sur la taille/Length) et la phase de brute-force du mot de passe (basée sur le code de statut 302 Redirect).#
+
+=== Q4. Quelle "Bonne Pratique" de développement permettrait d’empêcher cette attaque ?
+
+*Réponse de Sebastian Munoz :*
+_La bonne pratique de développement permettant d’empêcher cette attaque est "l’utilisation de réponses d’erreur uniformes lors de l’authentification", en renvoyant le même message, la même taille de réponse et le même code HTTP que le nom d’utilisateur ou le mot de passe soit incorrect, afin d’empêcher toute énumération des comptes._
+
+[green]#**Correction / Commentaire :**#
+[green]#Exactement. On appelle cela l'utilisation de messages d'erreur génériques (ex: "Identifiant ou mot de passe incorrect").#
+
+== [green]#Lab 3 : Analyse de Session (Non traité)#
+
+[green]#Sebastian Munoz n'a pas fourni de réponses pour ce laboratoire.#
+
+=== [green]#Q5. Quelle était la structure exacte du cookie décodé ?#
+
+[green]#**Correction :**#
+[green]#Le cookie était une chaîne encodée en Base64. Une fois décodée, sa structure était : `username:md5(password)`.#
+[green]#Exemple : `wiener:51dc30ddc473d43a6011e9ebba6ca770`#
+
+=== [green]#Q6. Pourquoi l'utilisation de l'algorithme MD5 pour hasher le mot de passe dans le cookie est-elle une faiblesse critique aujourd'hui ?#
+
+[green]#**Correction :**#
+[green]#MD5 est un algorithme obsolète car il est trop rapide à calculer. Avec la puissance des cartes graphiques actuelles, un attaquant peut tester des milliards de combinaisons par seconde pour casser le hash, ou utiliser des "Rainbow Tables" pour trouver le résultat instantanément.#
+
+=== [green]#Q7. Si le développeur avait utilisé un "Grain de sel" (Salt) aléatoire inconnu de l'attaquant, l'attaque aurait-elle fonctionné ?#
+
+[green]#**Correction :**#
+[green]#Non. Si le serveur ajoute un secret (Salt) au mot de passe avant de le hasher, l'attaquant ne peut pas prédire le hash final car il ne possède pas ce sel. Il devient donc impossible de forger un cookie valide pour la victime.#

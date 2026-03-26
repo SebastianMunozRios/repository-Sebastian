@@ -1,0 +1,77 @@
+= Compte rendu de TP : BLOC 3 04-Atelier Sessions Portswigger
+:author: Luc Zhang
+:toc: left
+:imagesdir: imglzhang
+:icons: font
+:source-highlighter: rouge
+
+== Challenges
+
+=== Challenge 1
+NOTE: Oublié de le prendre en capture d'écran
+
+=== Challenge 2
+image::img.png[Challenge numéro 2]
+
+=== Challenge 3
+image::img_1.png[Challenge numéro 3]
+
+---
+
+== Réponses aux questions
+
+=== Q1 : Pourquoi la gestion par cookie est-elle dangereuse ?
+
+*Réponse de Luc Zhang :*
+_C’est dangereux car le cookie est stocké sur le client (le navigateur de l'utilisateur). Un utilisateur malveillant peut facilement intercepter et modifier cette valeur en inspectant les éléments (F12) ou d'un proxy comme Burp Suite. En changeant false par true, il réalise une élévation de privilèges sans aucune vérification côté serveur._
+
+[green]#**Correction / Commentaire :**#
+[green]#Réponse parfaite. Vous avez bien identifié le problème de confiance envers le client (Client-Side Trust) et l'impact direct (élévation de privilèges).#
+
+=== Q2 : Quelle est la bonne méthode côté serveur ?
+
+*Réponse de Luc Zhang :*
+_Méthode session coté serveur_
+
+[green]#**Correction / Commentaire :**#
+[green]#C'est exact sur le principe. Pour être plus précis : le serveur doit stocker les rôles dans sa base de données et ne fournir au client qu'un **Identifiant de Session** aléatoire (Session ID). Ainsi, le client ne possède aucune donnée sensible à modifier.#
+
+=== Q3 : Quel élément technique permet de distinguer le bon login dans Burp ?
+
+*Réponse de Luc Zhang :*
+_C'est la Taille (Length) de la réponse HTTP qui a permis de distinguer le bon login, car le message de succès est différent du message d'erreur._
+
+[green]#**Correction / Commentaire :**#
+[green]#Correct. La variation de la longueur (Length) est l'indicateur le plus fiable dans ce type d'attaque.#
+
+=== Q4 : Quelle "Bonne Pratique" de développement (vue en cours) permettrait d’empêcher cette attaque ?
+
+*Réponse de Luc Zhang :*
+_Utiliser des messages d'erreur génériques (ex: "Identifiants incorrects") et mettre en place un blocage après plusieurs tentatives ratées (Rate Limiting)._
+
+[green]#**Correction / Commentaire :**#
+[green]#Très bonne réponse complète. Vous citez les deux mesures clés : les messages génériques (contre l'énumération) et le blocage (contre le brute-force).#
+
+=== Q5 : Quelle était la structure exacte du cookie décodé ? (Exemple : Login + Date, Login + Hash, etc.).
+
+*Réponse de Luc Zhang :*
+_La structure était : Login + Password hashé_
+
+[green]#**Correction / Commentaire :**#
+[green]#C'est presque complet. Pour être techniquement précis, la structure décodée du Base64 est : `login:MD5(password)`. Le séparateur `:` est important pour que le serveur puisse lire les données.#
+
+=== Q6 : Pourquoi l’utilisation de l’algorithme MD5 pour hasher le mot de passe dans le cookie est-elle une faiblesse critique aujourd’hui ?
+
+*Réponse de Luc Zhang :*
+_Le MD5 est beaucoup trop rapide à casser. On peut retrouver le mot de passe original en quelques secondes grâce à des sites comme CrackStation._
+
+[green]#**Correction / Commentaire :**#
+[green]#Exactement. La rapidité de calcul de MD5 est sa principale faiblesse face aux GPU modernes et aux Rainbow Tables (CrackStation).#
+
+=== Q7 : Si le développeur avait utilisé un "Grain de sel" (Salt) aléatoire inconnu de l’attaquant pour générer le hash, l’attaque aurait-elle fonctionné ? Justifiez.
+
+*Réponse de Luc Zhang :*
+_Non. Car le Grain de sel rend le hash unique. Les dictionnaires de hashs pré-calculés ne fonctionneraient plus, obligeant l'attaquant à faire des calculs impossibles à son échelle._
+
+[green]#**Correction / Commentaire :**#
+[green]#Excellente justification. Vous avez parfaitement compris que le sel rend les Rainbow Tables inutilisables.#

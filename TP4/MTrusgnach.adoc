@@ -1,0 +1,64 @@
+= Compte rendu TP : Mathias Trusgnach
+:toc: left
+:icons: font
+:source-highlighter: rouge
+:imagesdir: imgmtru
+
+== Labo 1 : Manipulation de cookie
+
+*Résumé de Mathias Trusgnach :*
+_Pour le labo 1 il s'agissait de manipuler un cookie pour pouvoir se connecter en admin avec un compte utilisateur en modfiiant la valeur de admin=false par admin=true on pouvait accéder en admin et pour voir supprimer des profils utilisateurs. Avec l'aide du cookie on a pu ainsi profiter du compte administrateuru effectuer une élévation de privilège et ainsi profiter du compte adminstrateur_
+
+image::vrailabo1.png[Preuve Lab 1]
+
+[green]#**Commentaire général :**#
+[green]#Le principe de l'attaque est bien compris. Vous avez correctement identifié le mécanisme d'élévation de privilèges via la modification du cookie._
+
+=== [green]#Q1. Pourquoi est-il dangereux de stocker un paramètre comme Admin=false directement dans un cookie ?#
+
+[green]#**Correction (Non répondu explicitement) :**#
+[green]#C'est dangereux car le cookie est stocké côté client. L'utilisateur a un contrôle total dessus et peut le modifier. Le serveur ne doit jamais faire confiance aux données venant du client sans vérification.#
+
+=== [green]#Q2. Quelle aurait été la bonne méthode pour gérer les droits administrateur côté serveur ?#
+
+[green]#**Correction (Non répondu) :**#
+[green]#Le serveur ne doit stocker qu'un ID de session côté client. Le rôle (Admin/User) doit être stocké en base de données et vérifié par le serveur à chaque requête.#
+
+== Labo 2 : Énumération de login
+
+*Résumé de Mathias Trusgnach :*
+_Il s'agissait ici d'une attaque par dictionnaire et par brute force dans le but de trouver un mot de passe avec BurpSuite grâce à l'intruder on a pu alors sélection username et password et ainsi regarder dans la colonne username lors de l'attaque la colonne lengths et pour le password il s'agissait du passowrd code, on a pu alors se connecter avec un username et password qu'on avait pas en testant un username et password complétement faux pour récuperer le username et faire la même attaque pour récupérer le password associer_
+
+image::labo2.png[Preuve Lab 2]
+
+[green]#**Commentaire général :**#
+[green]#La méthode technique est comprise. Vous mentionnez bien la colonne "Length" pour le username. Pour le password, quand vous dites "password code", vous faites référence au **Status Code** (302) qui change, ce qui est exact._#
+
+=== [green]#Q3. Quel élément technique précis permet de distinguer le bon login ?#
+
+[green]#**Correction :**#
+[green]#Comme vous l'avez noté, c'est la variation de la taille de la réponse (Length) pour l'énumération du login, et le code de statut (302 Redirect) pour le mot de passe.#
+
+=== [green]#Q4. Quelle "Bonne Pratique" permettrait d'empêcher cette attaque ?#
+
+[green]#**Correction (Non répondu) :**#
+[green]#Il faut utiliser des messages d'erreur génériques (ex: "Identifiant ou mot de passe incorrect") pour que toutes les réponses aient la même taille, empêchant ainsi l'attaquant de deviner si le compte existe.#
+
+== [green]#Labo 3 : Analyse de Session (Non traité)#
+
+[green]#Mathias Trusgnach n'a pas fourni de résumé ou de réponses pour ce laboratoire.#
+
+=== [green]#Q5. Quelle était la structure exacte du cookie décodé ?#
+
+[green]#**Correction :**#
+[green]#La structure était : `username:MD5(password)`.#
+
+=== [green]#Q6. Pourquoi l'utilisation de MD5 est-elle une faiblesse critique ?#
+
+[green]#**Correction :**#
+[green]#MD5 est trop rapide. Un attaquant peut tester des milliards de mots de passe par seconde ou utiliser des Rainbow Tables pour retrouver le mot de passe instantanément.#
+
+=== [green]#Q7. L'attaque aurait-elle fonctionné avec un "Salt" (Grain de sel) ?#
+
+[green]#**Correction :**#
+[green]#Non. Le sel est un secret serveur ajouté au mot de passe avant le hachage. Sans ce sel, l'attaquant ne peut pas pré-calculer les hashs pour forger le cookie.#

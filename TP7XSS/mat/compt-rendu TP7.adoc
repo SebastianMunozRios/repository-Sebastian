@@ -1,0 +1,241 @@
+question 1:
+
+
+Le niveau 1 correspond généralement à une protection très faible ou inexistante.
+Avec Burp Suite, il est possible de :
+
+intercepter la requête HTTP
+
+modifier les paramètres envoyés
+
+injecter du code malveillant
+
+➡️ L’attaque fonctionne donc toujours.
+
+question 2:
+
+Oui.
+
+Au niveau de sécurité 1 :
+
+le formulaire n’effectue pas de filtrage
+
+les données utilisateur sont directement utilisées dans le script
+
+Donc on peut entrer par exemple :
+
+<script>alert('XSS')</script>
+
+ou une commande malveillante.
+
+question 3:
+
+Au niveau 1, on trouve généralement :
+
+aucune validation stricte des entrées
+
+utilisation directe de la variable $_GET ou $_POST
+
+exécution directe de la commande système
+
+Exemple typique :
+
+$target = $_GET['target'];
+system("nslookup $target");
+
+⚠️ Ici la variable utilisateur est injectée directement dans la commande.
+
+question 4:
+
+
+es attaques Cross-Site Scripting (XSS) utilisent souvent :
+
+<
+
+>
+
+"
+
+'
+
+/
+
+( )
+
+;
+
+Exemple :
+
+<script>alert('XSS')</script>
+
+ou
+
+<img src=x onerror=alert(1)>
+
+Ces caractères permettent d’injecter du JavaScript dans une page web.
+
+question 5:
+
+✅ Oui, dans la plupart des cas.
+
+Même si on modifie la requête avec Burp Suite :
+
+les entrées sont filtrées côté serveur
+
+les caractères dangereux sont bloqués ou transformés
+
+➡️ L’attaque ne fonctionne plus.
+
+
+question 6:
+
+On trouve généralement des variables de sécurité comme :
+
+$high
+
+$input
+
+$target
+
+$safe_input
+
+et des fonctions de filtrage comme :
+
+htmlspecialchars()
+
+escapeshellcmd()
+
+escapeshellarg()
+
+preg_match()
+
+Ces variables servent à contrôler et nettoyer les entrées utilisateur.
+
+
+question 7:
+
+
+On trouve généralement des variables de sécurité comme :
+
+$high
+
+$input
+
+$target
+
+$safe_input
+
+et des fonctions de filtrage comme :
+
+htmlspecialchars()
+
+escapeshellcmd()
+
+escapeshellarg()
+
+preg_match()
+
+Ces variables servent à contrôler et nettoyer les entrées utilisateur.
+
+question 8:
+
+(Souvent une instruction de filtrage ou validation)
+
+Exemple typique :
+
+if(!preg_match("/^[a-zA-Z0-9.-]+$/", $target))
+
+📌 Cette instruction vérifie que l’entrée :
+
+contient uniquement des caractères autorisés
+
+empêche l’injection de commandes
+
+question 9:
+
+;
+
+|
+
+&
+
+&&
+
+||
+
+`
+
+Exemple d’attaque :
+
+8.8.8.8; cat /etc/passwd
+
+La protection empêche ce type d’ajout.
+
+
+question 10:
+
+
+La fonction principale est :
+
+htmlspecialchars()
+
+Elle transforme les caractères HTML dangereux :
+
+Caractère	Transformé en
+<	&lt;
+>	&gt;
+"	&quot;
+
+Exemple :
+
+<script>
+
+devient
+
+&lt;script&gt;
+
+➡️ Le navigateur ne l’exécute plus.
+
+question 11:
+
+Exemple :
+
+Avant :
+
+echo htmlspecialchars($target);
+
+Après (pour tester l’effet) :
+
+echo $target;
+
+Cela permet de voir que :
+
+avec htmlspecialchars() → pas de XSS
+
+sans → XSS possible
+
+⚠️ uniquement pour test en TP.
+
+
+
+question 12:
+
+Le niveau 5 met en place plusieurs protections :
+
+1️⃣ Filtrage des entrées
+
+validation des caractères autorisés
+
+2️⃣ Protection contre les injections de commandes
+
+suppression des caractères dangereux (;, |, &)
+
+3️⃣ Protection XSS
+
+utilisation de htmlspecialchars()
+
+4️⃣ Nettoyage des variables utilisateur
+
+contrôle strict des paramètres envoyés
+
+➡️ Ce niveau applique donc une validation et un nettoyage des données avant leur utilisation.

@@ -1,0 +1,83 @@
+= Compte rendu — TP4 : Marie-Dominique Dzalamou
+v1.0, 2026-02-05
+:toc: left
+:toc-title: Sommaire
+:sectnums:
+:icons: font
+:imagesdir: imgmdz
+:source-highlighter: rouge
+
+== Réponses aux questions
+
+=== Question 1
+
+**Question :**
+Pourquoi est-il dangereux de stocker un paramètre comme Admin=false directement dans un cookie, même si l’utilisateur ne peut pas le voir à l’écran ?
+
+**Réponse de Marie-Dominique Dzalamou :**
+_Parce que le paramètre peut être facilement modifiable par l'utilisateur._
+
+[green]#**Correction / Commentaire :**#
+[green]#C'est exact. Le point fondamental est que le cookie est stocké côté client. Le serveur ne doit jamais faire confiance à une donnée qui a transité par le client sans la vérifier, car l'utilisateur a un contrôle total dessus (via F12 ou Burp).#
+
+=== Question 2
+
+**Question :**
+Quelle aurait été la bonne méthode pour gérer les droits administrateur côté serveur (PHP/Base de données) ?
+
+[green]#**Correction (Non répondu) :**#
+[green]#Le serveur ne doit stocker qu'un **Identifiant de Session** (Session ID) aléatoire dans le cookie. Le rôle (Admin ou User) doit être stocké dans la **Base de Données** du serveur et vérifié à chaque chargement de page associé à cet ID.#
+
+=== Question 3
+
+**Question :**
+Dans l’attaque Intruder, quel élément technique précis vous a permis de distinguer le bon login des mauvais (Code HTTP ? Taille en octets ? Temps de réponse ?) ?
+
+**Réponse de Marie-Dominique Dzalamou :**
+_Ce qui m'a permis de distinguer le bon login des mauvais était la taille en octet_
+
+image::lol.png[Preuve Intruder]
+
+[green]#**Correction / Commentaire :**#
+[green]#Correct. La variation de la taille de la réponse (Length) indique que le serveur a renvoyé un message différent (souvent l'erreur change de "Invalid username" à "Incorrect password"), trahissant l'existence du compte.#
+
+=== Question 4
+
+**Question :**
+Quelle "Bonne Pratique" de développement (vue en cours) permettrait d’empêcher cette attaque ?
+
+**Réponse de Marie-Dominique Dzalamou :**
+_Il faudrait utiliser un hachage avec un sel à mettre dans le programme pour rendre l'attaque par dictionnaire plus compliqué_
+
+[green]#**Correction / Commentaire :**#
+[green]#Attention, confusion ! Le hachage/sel protège les mots de passe stockés en base, mais n'empêche pas l'énumération des logins.#
+[green]#Pour empêcher de deviner si un login existe, il faut utiliser des **Messages d'erreur génériques**. L'application doit répondre "Identifiant ou mot de passe incorrect" dans tous les cas, pour que la taille de la réponse soit toujours identique.#
+
+=== [green]#Question 5 (Non traitée)#
+
+[green]#**Question :** Quelle était la structure exacte du cookie décodé ?#
+
+[green]#**Correction :**#
+[green]#Le cookie décodé (Base64) avait la structure : `username:MD5(password)`#
+
+=== [green]#Question 6 (Non traitée)#
+
+[green]#**Question :** Pourquoi l’utilisation de l’algorithme MD5 est-elle une faiblesse critique ?#
+
+[green]#**Correction :**#
+[green]#MD5 est un algorithme obsolète et beaucoup trop rapide. Un attaquant peut tester des milliards de combinaisons par seconde pour casser le hash.#
+
+=== [green]#Question 7 (Non traitée)#
+
+[green]#**Question :** L'attaque aurait-elle fonctionné avec un "Salt" (Grain de sel) ?#
+
+[green]#**Correction :**#
+[green]#Non. Le sel est un secret serveur ajouté au mot de passe avant le hachage. Sans connaître le sel, l'attaquant ne peut pas forger le cookie.#
+
+== Preuves de réussite
+
+image::lab1.png[Preuve Lab 1]
+
+image::lab2.png[Preuve Lab 2]
+
+image::mdp.png[Preuve Mot de passe]

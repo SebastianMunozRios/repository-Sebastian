@@ -1,0 +1,81 @@
+= Compte rendu — TP5 (Correction TP6 - XSS) : Marie-Dominique Dzalamou
+v1.0, 2026-02-19
+:toc: left
+:toc-title: Sommaire
+:sectnums:
+:icons: font
+:imagesdir: imgmddzalamou
+:source-highlighter: rouge
+
+=== Question 1
+
+**Question :**
+Quelle est la différence majeure entre le Lab 1 (Reflected) et le Lab 2 (Stored) en termes de dangerosité ? Si vous vouliez piéger un administrateur, quelle méthode serait la plus efficace pour ne pas éveiller les soupçons ?
+
+**Réponse de Marie-Dominique Dzalamou :**
+_La différence entre le reflected et le stored est que le reflected affiche directement l'injection (ici l'alert ) et il est temporaire, alors que le stored lui est conservé dans le serveur, ce qui peut être beaucoup plus dangereux si l'attaque n'a pas été détecter._
+_La méthode la plus efficace serai d'utiliser le stored dans une requête "normal", par exemple l'espace commentaire du lab 2, comme ça l'injection y serait tant qu'elle n'est pas détecter._
+
+image::lab1.png[Capture Lab 1]
+image:lab2.png[Capture Lab 2]
+
+[green]#**Correction / Commentaire :**#
+[green]#**Très bien.** La distinction entre le côté temporaire du Reflected et la conservation serveur du Stored est parfaitement comprise. Le scénario d'attaque via l'espace commentaire est tout à fait réaliste pour piéger un profil administrateur lors de ses tâches de modération.#
+
+=== Question 2
+
+**Question :**
+Dans le Lab 3, pourquoi l’injection classique <script>alert(1)</script> ne fonctionne-t-elle pas ? Expliquez techniquement ce que fait le navigateur avec les caractères < et >
+
+**Réponse de Marie-Dominique Dzalamou :**
+_L'injection ne fonctionne pas parce qu'elle est mis directement entre guillemet automatiquement, en tant que qu'attribut, ce qui désactive la balise <script> en encodant les cheverons_
+
+image::lab3.png[Capture Lab 3]
+
+[green]#**Correction / Commentaire :**#
+[green]#**Bonne réponse.** L'idée est là : la donnée se retrouve coincée dans un attribut HTML (ex: `value="..."`). Attention juste à la formulation : ce n'est pas le navigateur qui encode les chevrons, c'est le **serveur** qui les transforme (< devient `\&lt;` et > devient `\&gt;`)). Le navigateur, lui, se contente de lire cet encodage et de l'afficher comme du texte simple sans l'exécuter.#
+
+
+=== Question 3
+
+**Question :**
+Dans le Lab 4, votre payload ressemble à '; alert(1); //. Expliquez précisément le rôle de chaque partie de cette chaîne : * ' : Sert à …​* ; : Sert à …​* // : Sert à …​
+
+**Réponse de Marie-Dominique Dzalamou :**
+_La première simple quote permet de fermer la chaîne de caractère, le point virgule permet de fermer l'instruction, "alert(1)"  permet de lancer une alerte sur la page, et les deux barre obliques permettent de mettre en commentaire le reste de la ligne pour éviter les erreurs_
+
+image::lab4.png[Capture Lab 4]
+
+[green]#**Correction / Commentaire :**#
+[green]#**Excellent.** L'explication syntaxique est irréprochable. C'est exactement la logique d'évasion d'un contexte JavaScript.#
+
+=== Question 4
+
+**Question :**
+Pourquoi un pare-feu applicatif (WAF) situé sur le serveur a-t-il plus de mal à détecter une faille DOM XSS par rapport à une faille Reflected XSS classique ? (Indice : Où s’exécute le code vulnérable ?)
+
+**Réponse de Marie-Dominique Dzalamou :**
+_La meilleure méthode de protection est l'utilisation des requêtes préparées, pour éviter que les injections se faufilent et qu'elles soient considérées comme de simples données brutes dans le code_
+
+image::lab5.png[Capture Lab 5]
+
+[green]#**Correction / Commentaire :**#
+[green]#**Attention, hors-sujet total !** Tu as copié-collé ta réponse de la question 4 du TP précédent sur les bases de données (SQL).#
+[green]#Ici, on parle du **DOM XSS**. La bonne réponse est que l'attaque DOM XSS s'exécute **entièrement dans le navigateur du client** (souvent via le fragment d'URL ##
+[green]#Cette partie de l'URL n'est jamais envoyée au serveur. Par conséquent, le pare-feu (WAF) ne voit passer aucune charge malveillante et ne peut rien bloquer.#
+
+
+=== Question 5
+
+**Question :**
+Si vous étiez développeur, quelle est la règle d’or pour empêcher les failles XSS ?
+
+**Réponse de Marie-Dominique Dzalamou :**
+_Je dirais d'effectuer des requêtes SQL préparées. Le script est important pour le fonctionnement de la page, et l'encodage peut être facilement contrer comme on l'a vu dans l'un des lab._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Attention, confusion majeure entre les vulnérabilités !** Il faut impérativement séparer les deux concepts :#
+
+[green]#1. **Les requêtes préparées** protègent la Base de Données contre le **SQLi**. Elles n'ont strictement aucun effet sur le XSS.#
+
+[green]#2. Pour empêcher le **XSS**, la cible est le navigateur. La règle d'or est bien l'**encodage (échappement) des données**. Si l'encodage est parfois contourné dans les labs, c'est uniquement parce qu'il a été mal implémenté (mauvais contexte ciblé), mais un encodage contextuel strict reste la seule défense absolue contre l'exécution de scripts indésirables.#

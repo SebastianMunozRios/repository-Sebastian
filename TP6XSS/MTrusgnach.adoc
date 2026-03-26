@@ -1,0 +1,76 @@
+= TP6 compte rendu : Mathias Trusgnach
+:toc: left
+:icons: font
+:source-highlighter: rouge
+:imagesdir: imgmtrusgnach
+
+== question 1 : Différence entre labo 1 et labo 2
+
+*Réponse de Mathias Trusgnach :*
+_Labo 1 explication: Pour faire simple on a piégé le navigateur pour pouvoir apparaître une popup piégé pour pouvoir prendre le contrôle du navigateur_
+
+image::image réussite labo 1 requête.png[Capture Lab 1]
+
+_Cette popup a permis la validation du lab 1 mais surtout permet de prendre le contrôle en cachant un lien piégé dans la popup pour poivoir prendre le contrôle et pouvoir se connecter en compte administrateur en remplacant les éléments de recherche par l'injection XSS dans la barre de recherche on a pu faire l'injection du code malveillant_
+
+image::image réussite labo 1.png[Capture Lab 1 bis]
+
+_Pour ce qui est de différent dans le labo 2 c'est que ceci est fait dans un commentaire de blog on a exploité une faille en injectant du javascript dans un commentaire en piégant la photo. La méthode la plus efficace serait la méthode stored déjà en terme de dangerosité mais aussi et surtout en terme de passer inaperçu pour faire de l'élevage de privilège et de se connecter en administrateur._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Attention aux imprécisions.** Dans le Lab 1, la popup (l'alerte) ne sert absolument pas à "prendre le contrôle du navigateur". C'est juste un **Proof of Concept (PoC)** : une preuve inoffensive que l'on arrive à exécuter du JavaScript. Dans une vraie attaque, on remplacerait cette alerte par un script invisible qui vole le cookie de session (ce que tu appelles l'élévation de privilège).#
+[green]#Pour le Lab 2, ta conclusion est bonne : le **Stored XSS** est effectivement le plus dangereux et le plus discret pour piéger un administrateur.#
+
+
+== question 2 : Le contexte d’attribut (Lab 3)
+
+*Réponse de Mathias Trusgnach :*
+_Dans le lab 3 l'injection classique ne fonctionnne pas car l'injection \&lt;script\&gt;alert\&lt;script\&gt; est fait pour placer une popup quand, alors que la on peut se servir pour piégé la recherche en faisant en sorte d'injecter en paramètre l'évenement: "onmouseover="alert(1) qui permet de créer un événement quand on passer la souris dans la barre de recherche dans le but de piéger.
+
+Les caractères \&lt; et \&gt; ou plutôt chevron permettent de casser ou annuler le HTML dans le code source de l'application web et qui permet la création de la backdoor dans le code pour l'injection XSS._
+
+image::image réussite labo 3.png[Capture Lab 3]
+
+[green]#**Correction / Commentaire :**#
+[green]#**Grosse confusion conceptuelle ici !** Les chevrons `\&lt;` et `\&gt;` ne "créent pas de backdoor" et n'annulent pas le HTML. Ce sont simplement les caractères de base qui permettent d'**ouvrir et fermer une balise HTML**.#
+[green]#Si l'injection classique ne fonctionne pas ici, c'est parce que le serveur web a **encodé** ces chevrons (il les a transformés en entités inoffensives comme `\&amp;lt;`). Le navigateur ne les voit donc plus comme des balises exécutables, mais comme du texte normal. C'est pour contourner ce blocage que , en tant qu'attaquant, l'on est obligé d'utiliser un événement (attribut) comme `onmouseover` !#
+
+
+== question 3 : Syntaxe JavaScript (Lab 4)
+
+*Réponse de Mathias Trusgnach :*
+_Les caractères ' * ;  //
+
+Le caractère // permet de créer des commentaires qui va ignorer le reste du script pour faire en sorte que le navigateur lit que l'injection XSS. On va injecter ces attributs dans le navigateur comme pour les injections SQL._
+
+[green]#**Correction / Commentaire :**#
+
+[green]#**Réponse très incomplète.**
+Tu as bien défini le `//` (commentaire), mais tu as totalement oublié de définir le rôle de l'apostrophe (`'`) et du point-virgule (`;`).#
+
+[green]#L'apostrophe `'` sert à **fermer la chaîne de caractères** existante.#
+
+[green]#Le point-virgule `;` sert à **terminer l'instruction JavaScript** en cours.#
+
+[green]#Sans ces deux éléments, ton `//` ne sert à rien car le script global planterait à cause d'une erreur de syntaxe.#
+
+
+== question 4 : DOM XSS (Lab 5)
+
+*Réponse de Mathias Trusgnach :*
+_Le pare feu aura du mal à détecter l'attaque DOM XSS car elle s'effectue côté client et pas côté serveur alors que le firewall s'occupe que du côté serveur. Alors que le Reflected XSS se fait directement dans la recherche et donc sera plus facile à repérer pour les applications protégés correctement contre cette attaque c'est pour cela que le firewall est un excellent moyen contre les injections XSS_
+
+[green]#**Correction / Commentaire :**#
+[green]#**Le début est très bon.** Tu as bien compris que le DOM XSS s'exécute côté client (navigateur) sans que la charge malveillante ne soit forcément envoyée au serveur, rendant le WAF aveugle.#
+[green]#**Attention à la fin :** Ne jamais dire qu'un pare-feu est un "excellent moyen" contre les XSS. Un WAF peut être contourné. La seule vraie protection se fait dans le code source de l'application.#
+
+
+== question 5 : Remédiation
+
+*Réponse de Mathias Trusgnach :*
+_Si je suis développeur j'interdit j'encode toutes les données afin que mon code soit à première vue soit chiffré afin d'éviter que toute personne ou hacker puissent injecter du XSS dans mon code afin de préserver sa sécurité. Et puis en chiffrant mon code je pourrai ainsi mieux sécuriser mon application ou site web et je serai le seul à pouvoir connaître mon code et les moyens de sécurité employé à la protection des failles XSS_
+
+[green]#**Correction / Commentaire :**#
+[green]#**Alerte rouge sur le vocabulaire ! Tu confonds "Encodage" et "Chiffrement" (Cryptographie).**#
+[green]#Encoder les données pour contrer le XSS ne veut pas dire "chiffrer/crypter" ou "cacher" son code source ! L'encodage HTML (Output Encoding) consiste simplement à convertir les caractères dangereux saisis par un utilisateur (ex: `\&lt;`) en leur équivalent texte (`\&amp;lt;`) pour que le navigateur ne les prenne pas pour des commandes.#
+[green]#Le code HTML final reste parfaitement lisible par tout le monde. L'objectif n'est pas de cacher des secrets, mais d'empêcher le navigateur d'exécuter des instructions parasites.#

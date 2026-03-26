@@ -1,0 +1,148 @@
+= Sécurisation Web : Atelier Cross-Site Scripting (XSS)
+:author: Timothée Robert
+:toc: left
+:toc-title: Sommaire
+:icons: font
+:source-highlighter: rouge
+:sectnums:
+:imagesdir: images
+
+== Introduction théorique
+
+Contrairement aux Injections SQL qui visent le serveur (vol de base de données), le **Cross-Site Scripting (XSS)** vise les **utilisateurs** du site.
+
+Le principe est simple : l'attaquant injecte du code **JavaScript** malveillant dans une page web. Ce code sera ensuite exécuté par le navigateur de la victime comme s'il faisait légitimement partie du site.
+
+=== Les 3 types de XSS
+1.  **Reflected XSS (Réfléchi) :** L'attaque passe par un lien piégé. Le serveur "reflète" l'injection immédiatement (ex: un message d'erreur ou une recherche). C'est temporaire.
+2.  **Stored XSS (Stocké) :** L'attaque est enregistrée sur le serveur (ex: commentaire, profil). Chaque visiteur de la page sera infecté. C'est la forme la plus dangereuse.
+3.  **DOM-based XSS :** L'attaque se passe uniquement côté client (dans le navigateur), souvent à cause d'un mauvais script JS qui manipule l'URL sans passer par le serveur.
+
+=== L'impact
+Avec du JavaScript (`<script>...`), un attaquant peut :
+
+* Voler les cookies de session (Session Hijacking).
+* Rediriger l'utilisateur vers un site de phishing.
+* Effectuer des actions à la place de l'utilisateur (ex: changer le mot de passe).
+
+== Mise en pratique (5 Labos)
+
+Connectez-vous à la **Web Security Academy** de PortSwigger.
+L'objectif est toujours de déclencher une popup `alert()` pour prouver la faille.
+
+=== Lab 1 : Le Classique (Reflected XSS)
+**Titre :** _Reflected XSS into HTML context with nothing encoded_
+
+**Lien :** https://portswigger.net/web-security/cross-site-scripting/reflected/lab-html-context-nothing-encoded
+
+**Contexte :**
+C'est le niveau zéro du XSS. Vous avez une barre de recherche. Ce que vous tapez est réaffiché à l'écran ("0 search results for ...").
+
+**Objectif :**
+Injecter une balise script standard pour faire apparaître une popup.
+
+[TIP]
+.Payload
+====
+`<script>alert(1)</script>`
+====
+
+=== Lab 2 : Le Piège à retardement (Stored XSS)
+**Titre :** _Stored XSS into HTML context with nothing encoded_
+
+**Lien :** https://portswigger.net/web-security/cross-site-scripting/stored/lab-html-context-nothing-encoded
+
+**Contexte :**
+Le site dispose d'un système de commentaires sur les articles de blog.
+Contrairement au Lab 1, votre texte est enregistré en base de données.
+
+**Objectif :**
+
+1.  Postez un commentaire contenant un script malveillant.
+2.  Retournez sur la page du blog (ou attendez qu'un administrateur virtuel la visite).
+3.  La popup doit s'ouvrir toute seule.
+
+=== Lab 3 : Sortir de la case (XSS dans un attribut)
+**Titre :** _Reflected XSS into attribute with angle brackets HTML-encoded_
+
+**Lien :** https://portswigger.net/web-security/cross-site-scripting/contexts/lab-attribute-angle-brackets-html-encoded
+
+**Contexte :**
+Parfois, votre saisie n'atterrit pas entre deux balises HTML, mais **dans** un attribut.
+Exemple : `<input type="text" value="VOTRE_SAISIE">`.
+
+Si vous tapez `<script>`, le navigateur encode les chevrons (`&lt;script&gt;`), ce qui désactive la balise. Il faut être plus malin et utiliser les **événements** JavaScript.
+
+**Objectif :**
+
+1.  Injectez une chaîne qui ferme le guillemet de l'attribut `value`.
+2.  Ajoutez un gestionnaire d'événement (comme `onmouseover`) qui lance `alert(1)`.
+3.  Passez votre souris sur le champ pour déclencher l'attaque.
+
+[TIP]
+.Indice
+====
+Essayez de transformer le code HTML final en ceci :
+`<input value="test" onmouseover="alert(1)">`
+Quel payload devez-vous taper dans la barre de recherche pour obtenir ce résultat ?
+====
+
+=== Lab 4 : Casser le JavaScript (XSS dans un script)
+**Titre :** _Reflected XSS into a JavaScript string with angle brackets HTML encoded_
+
+**Lien :** https://portswigger.net/web-security/cross-site-scripting/contexts/lab-javascript-string-angle-brackets-html-encoded
+
+**Contexte :**
+Cette fois, votre saisie est insérée directement à l'intérieur d'un bloc `<script>` existant, dans une variable.
+Code serveur : `var searchTerms = 'VOTRE_SAISIE';`
+
+Les balises `< >` sont interdites. Vous devez manipuler la syntaxe JavaScript pour "casser" la chaîne de caractères et exécuter votre propre commande.
+
+**Objectif :**
+Injecter une séquence qui :
+1.  Ferme la chaîne de caractères (`'`).
+2.  Ferme l'instruction (`;`).
+3.  Lance l'alerte (`alert(1)`).
+4.  Met en commentaire le reste de la ligne d'origine (`//`) pour éviter les erreurs de syntaxe.
+
+=== Lab 5 : Le DOM XSS (Client-Side)
+**Titre :** _DOM XSS in document.write sink using source location.search_
+
+**Lien :** https://portswigger.net/web-security/cross-site-scripting/dom-based/lab-document-write-sink
+
+**Contexte :**
+Ici, le serveur est clean. C'est le code JavaScript du navigateur qui est vulnérable.
+Regardez le code source de la page (Inspecter). Vous verrez un script qui lit l'URL (`location.search`) et l'écrit directement dans la page avec `document.write`.
+
+**Objectif :**
+Manipuler l'URL pour que `document.write` écrive une balise malveillante.
+Ici, vous devez injecter `<svg onload=alert(1)>`. Notez que l'élément doit être injecté là où le script s'attend à trouver le paramètre de recherche.
+
+<<<
+
+== Questions de Synthèse (Compte-rendu)
+
+Répondez aux questions suivantes pour valider votre compréhension.
+
+=== Q1. Différence Stored vs Reflected
+Quelle est la différence majeure entre le **Lab 1 (Reflected)** et le **Lab 2 (Stored)** en termes de dangerosité ? Si vous vouliez piéger un administrateur, quelle méthode serait la plus efficace pour ne pas éveiller les soupçons ?
+
+=== Q2. Le contexte d'attribut (Lab 3)
+Dans le Lab 3, pourquoi l'injection classique `<script>alert(1)</script>` ne fonctionne-t-elle pas ? Expliquez techniquement ce que fait le navigateur avec les caractères `<` et `>`.
+
+=== Q3. Syntaxe JavaScript (Lab 4)
+Dans le Lab 4, votre payload ressemble à `'; alert(1); //`. Expliquez précisément le rôle de chaque partie de cette chaîne :
+* `'` : Sert à ...
+* `;` : Sert à ...
+* `//` : Sert à ...
+
+=== Q4. DOM XSS (Lab 5)
+Pourquoi un pare-feu applicatif (WAF) situé sur le serveur a-t-il plus de mal à détecter une faille **DOM XSS** par rapport à une faille Reflected XSS classique ? (Indice : Où s'exécute le code vulnérable ?)
+
+=== Q5. Remédiation
+Si vous étiez développeur, quelle est la règle d'or pour empêcher les failles XSS ?
+
+a.  Interdire le mot "script".
+b.  Encoder (échapper) toutes les données affichées à l'écran (ex: `<` devient `&lt;`).
+c.  Utiliser uniquement des requêtes SQL préparées.
+Justifiez votre choix.

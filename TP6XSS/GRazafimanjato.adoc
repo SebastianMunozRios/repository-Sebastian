@@ -1,0 +1,78 @@
+= Compte-rendu du TP.6 (Gédéon Razafimanjato)
+:author: Gedeon Razafimanjato
+:toc: left
+:imagesdir: ./images
+:icons: font
+:source-highlighter: rouge
+
+[WARNING]
+.Oubli de Push (Git)
+====
+**Attention Gédéon :** Aucune de tes captures d'écran ne s'affiche. Tu as vraisemblablement oublié d'ajouter et de "push" ton dossier `images/` sur le dépôt distant (`git add images/` puis `git commit` et `git push`). Pense à vérifier ton dépôt en ligne la prochaine fois avant de rendre ton travail !
+====
+
+== Challenges
+
+=== Challenge 1
+image::TP réussi 1.png[Capture du Challenge 1]
+
+=== Challenge 2
+image:TP réussi 2.png[Capture du Challenge 2]
+
+=== Challenge 3
+image:TP réussi 3.png[Capture du Challenge 3]
+
+=== Challenge 4
+image:TP réussi 4.png[Capture du Challenge 4]
+
+=== Challenge 5
+image:TP réussi 5.png[Capture du Challenge 5]
+
+---
+
+== Compte-rendu des Questions
+Réponses des questions de la synthèse :
+
+=== 3.1. Différence Stored vs Reflected
+
+*Réponse de Gedeon Razafimanjato :*
+_Le Stored XSS est plus dangereux car permanent et passif. Pour piéger un admin sans soupçons, le Stored est idéal car l'injection est déjà sur le serveur, évitant l'envoi d'un lien suspect._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Parfait.** Les termes "permanent" et "passif" résument exactement la menace du Stored XSS. L'absence de lien suspect est effectivement le meilleur moyen de contourner la vigilance d'un administrateur.#
+
+
+=== 3.2. Le contexte d'attribut (Lab 3)
+
+*Réponse de Gedeon Razafimanjato :*
+_L'injection échoue car elle est placée dans un attribut HTML (ex: value="..."). Le navigateur traite les caractères < et > comme du texte brut ou des délimiteurs d'attributs, pas comme de nouvelles balises._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Très bien.** C'est correct. Techniquement, le serveur a procédé à un **encodage en entités HTML** (transformant `<` en `&lt;`), ce qui force le navigateur à le traiter comme du "texte brut" visuel et non comme un nœud du DOM.#
+
+=== 3.3. Syntaxe JavaScript (Lab 4)
+
+*Réponse de Gedeon Razafimanjato :*
+_Ferme la chaîne de caractères JS existante ; ; : Termine l'instruction actuelle pour en commencer une nouvelle ; // : Commente le reste du code original pour éviter les erreurs de syntaxe._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Exact.** L'explication de l'évasion du contexte JavaScript (String Breakout) est irréprochable. L'objectif d'éviter les "erreurs de syntaxe" est bien identifié.#
+
+=== 3.4. Le DOM XSS (Lab 5)
+
+*Réponse de Gedeon Razafimanjato :*
+_Le DOM XSS s'exécute côté client (navigateur) via des fragments d'URL (après le #) qui ne sont jamais envoyés au serveur, rendant l'attaque invisible pour le WAF._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Brillant.** Une phrase, trois concepts clés maîtrisés : exécution côté client, rôle du fragment `#`#
+[green]#(hash), et l'invisibilité pour le pare-feu applicatif.#
+
+
+=== 3.5. Remédiation
+
+*Réponse de Gedeon Razafimanjato :*
+_Je choisirais sans hésiter l'encodage (échappement) des données, car c'est la seule méthode qui neutralise l'interprétation du code par le navigateur en transformant les caractères spéciaux en entités HTML inoffensives._
+_Interdire le mot "script" est insuffisant face aux vecteurs alternatifs (comme onmouseover), et les requêtes préparées servent uniquement à contrer les injections SQL, pas le XSS._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Réponse modèle.** L'argumentation est complète. Tu justifies ton choix avec le mécanisme technique adéquat (transformation en entités HTML) tout en démontant logiquement les mauvaises solutions. Excellent travail de synthèse.#

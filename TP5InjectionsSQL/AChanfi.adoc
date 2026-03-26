@@ -1,0 +1,80 @@
+= Réponses aux questions sur l'Injection SQL : Alkaim Chanfi
+:toc: left
+:icons: font
+:source-highlighter: rouge
+:imagesdir: imgachanfi
+
+
+=== Screenshot de réussite du lab 1 !
+image::Capture d'écran 2026-02-12 143956.png[Preuve Lab 1]
+
+=== Screenshot de réussite du lab 2 !
+image::Capture d'écran 2026-02-12 150327.png[Preuve Lab 2]
+
+=== Screenshot de réussite du lab 3 !
+image::Capture d'écran 2026-02-12 151353.png[Preuve Lab 3]
+
+=== Autres screenshots !
+image::lab-sql-injection-where.png[Preuve Lab 4]
+
+image::lab-sql-union-attack.png.png[Preuve Lab]
+
+== Q1. Logique du OR 1=1 (Retrieval of hidden data)
+
+*Réponse de Alkaim Chanfi :*
+_La logique repose sur la priorité des opérateurs et la vérité absolue d'une condition._
+_Requête originale : `SELECT * FROM products WHERE category = 'Gifts' AND released = 1`_
+_Après injection : `SELECT * FROM products WHERE category = 'Gifts' OR 1=1--' AND released = 1`_
+_Logique : En SQL, la condition 1=1 est toujours vraie (TRUE). Dans une clause WHERE, si vous utilisez OR TRUE, la condition globale devient vraie pour chaque ligne de la table, peu importe si l'article est "caché" (released = 0) ou non. Le moteur de base de données ignore les filtres de sécurité initiaux._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Excellent.** Analyse parfaite de la logique booléenne. Vous avez bien identifié que le `OR TRUE` rend l'ensemble de la condition vraie (Tautologie), annulant l'effet du filtre `AND`.#
+
+== Q2. Rôle du commentaire -- (Login Bypass)
+
+*Réponse de Alkaim Chanfi :*
+_Les caractères -- (ou #) indiquent au moteur SQL que tout ce qui suit sur la même ligne est un commentaire et ne doit pas être exécuté._
+_Impact : Dans un formulaire de connexion, la requête ressemble souvent à : `SELECT * FROM users WHERE username = '$user' AND password = '$password'`_
+_Injection : En entrant administrator'--, la requête devient : `SELECT * FROM users WHERE username = 'administrator'--' AND password = '...'`_
+_Résultat : Toute la partie vérifiant le mot de passe (AND password = ...) est "effacée" par le commentaire. Le serveur vérifie seulement si l'utilisateur administrator existe. S'il existe, la session s'ouvre sans même regarder le mot de passe._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Parfait.** L'exemple de code montre très bien comment le commentaire neutralise la fin de la requête. C'est exactement ce qui était attendu.#
+
+
+
+== Q3. Structure de l'attaque UNION
+
+*Réponse de Alkaim Chanfi :*
+_L'opérateur UNION permet de combiner les résultats de deux requêtes SELECT différentes. Pour que cela fonctionne, SQL impose deux règles strictes :_
+
+_1. Le même nombre de colonnes : Si la requête originale (produits) renvoie 3 colonnes, votre injection UNION SELECT doit aussi en avoir 3._
+
+_2. Types de données compatibles : On ne peut pas mettre du texte dans une colonne qui n'accepte que des nombres._
+
+_Si la structure diffère : La base de données renvoie une Erreur 500 (Internal Server Error), car elle est incapable de fusionner deux tableaux de tailles ou de types différents._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Très bien.** Vous êtes l'un des seuls à avoir mentionné la compatibilité des **types de données** (Data Types), ce qui est crucial techniquement. Bravo.#
+
+== Q4. La meilleure méthode de protection
+
+*Réponse de Alkaim Chanfi :*
+_La solution ultime n'est pas de filtrer les caractères (car il y a souvent des contournements), mais d'utiliser des Requêtes Préparées (Prepared Statements) avec des Paramètres liés (Parameterized Queries)._
+_Pourquoi ? Au lieu de construire une chaîne de caractères (string), on envoie la structure de la requête à la base de données, puis on lui envoie les données séparément._
+_Résultat : La base de données sait que la donnée fournie est une simple "valeur" (du texte) et non un morceau de code. Le caractère ' est alors traité comme un simple guillemet et non comme une instruction._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Réponse modèle.** Vous avez compris le fond du problème : la séparation entre le Code (Structure) et la Donnée (Valeur). C'est la seule protection fiable.#
+
+
+
+== Q5. Injection SQL "Blind" (Aveugle)
+
+*Réponse de Alkaim Chanfi :*
+_Dans une attaque Blind, l'attaquant pose des questions "Oui/Non" à la base de données._
+_Technique : L'attaquant teste les caractères un par un. Exemple : "Est-ce que la première lettre du mot de passe commence par 'a' ?". Si la page met plus de temps à charger (Time-based) ou affiche un message "Bienvenue" (Boolean-based), il sait que c'est vrai._
+_Lenteur : C'est beaucoup plus lent car pour un mot de passe de 10 caractères, il faut potentiellement tester des centaines de combinaisons (une requête par lettre et par possibilité). Une injection UNION récupère tout d'un coup, tandis que la Blind récupère 1 bit d'information à la fois._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Remarquable.** La comparaison entre "Récupérer tout d'un coup" et "Récupérer 1 bit à la fois" illustre parfaitement le concept. Vous avez une excellente compréhension du sujet ou alors vous avez réussi à faire le bon prompt pour obtenir une réponse optimale, il vous reste à la maitriser si on vous interroge.#

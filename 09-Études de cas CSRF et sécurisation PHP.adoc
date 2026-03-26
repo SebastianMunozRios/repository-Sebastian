@@ -1,0 +1,308 @@
+= Séance 09 : Applications Cybersécurité - Études de cas CSRF
+:toc: left
+:toc-title: Sommaire
+:icons: font
+:source-highlighter: rouge
+:imagesdir: ./images/tp8
+
+== Introduction
+
+Nous allons dans cette séance examiner concrètement des applications de Cybersécurité à travers des études de cas de niveau BTS.
+Le thème d’étude aujourd’hui est l'attaque **CSRF (Cross-Site Request Forgery)** : https://owasp.org/www-community/attacks/csrf
+
+Cette attaque redoutable incite la victime à effectuer une action « à l’insu de son plein gré » en utilisant ses habilitations sur une application légitime.
+
+Nous commencerons par des Travaux Pratiques (TP), puis nous enchaînerons sur une étude de cas (Cas Lama 2023). Pour les plus rapides, vous pourrez poursuivre sur les laboratoires PortSwigger : https://portswigger.net/web-security/csrf
+
+
+== Partie 1 : Travaux Pratiques (Mini-TPs CSRF)
+
+Les répertoires `Suppression_de_compte` et `Modification_de_profil` sont à installer sur votre serveur Web (par exemple dans `C:/laragon/www/trobert`). Au lieu de trobert mettez votre acronyme à vous. Il faut ensuite pointer le `DOCUMENT_ROOT` à la racine de ces répertoires et lancer Apache.
+
+_Indications :_ Je ferai d'abord une démonstration. Ensuite, vous pourrez reproduire les deux scénarios (modification de profil et suppression de compte) en suivant les guides ci-dessous.
+
+=== TP 1 : Modification de profil
+
+Ce premier TP illustre les attaques CSRF avec une **modification visible du profil utilisateur** (nom et email).
+
+**1. Dossiers inclus**
+[cols="1,2", options="header"]
+|===
+| Dossier | Description
+| `victime_noprotection/` | Victime vulnérable (pas de protection CSRF).
+| `victime_synchronizer/` | Protection par **Synchronizer Token Pattern**.
+| `victime_double_submit/` | Protection par **Double Submit Cookie Pattern**.
+| `attaque/` | Faux site malveillant modifiant le nom/email du profil.
+|===
+
+**2. Objectif du TP**
+
+* Simuler un utilisateur connecté avec `login.php`.
+* Afficher un formulaire de **modification du profil** (nom + email).
+* Visiter un faux site (`attaque/accueil.html`) qui envoie une requête POST malveillante.
+* Observer que **le profil est modifié à l’insu de l’utilisateur**.
+* Tester l’effet des protections CSRF.
+
+**3. Pages à tester**
+[cols="1,1,1", options="header"]
+|===
+| Page (dans attaque/) | Cible | Résultat attendu
+| `attaque_noprotection.html` | Pas de protection | 💥 Profil modifié
+| `attaque_sync.html` | Synchronizer Token | ✅ Échec de l’attaque
+| `attaque_double.html` | Double Submit Cookie | ✅ Échec de l’attaque
+|===
+
+**4. Fichiers clés & Traces**
+
+* `index.php` : Formulaire de modification du profil.
+* `login.php` : Simule une session active.
+* `profil.php` : Traite la mise à jour (vulnérable ou protégée).
+* `attaque/accueil.html` : Lien vers les 3 attaques.
+* **Traces :** Le fichier `profil.log` est créé dans le répertoire de chaque victime. On peut y lire les noms/emails envoyés. Le formulaire dans chaque victime est modifié **en live**.
+
+[TIP]
+.Astuces pour ce TP
+====
+* Examinez le fichier `profil.log` à chaque attaque.
+* Essayez de deviner à chaque fois si la mise à jour a été acceptée ou non.
+* Discutez des différences entre **session**, **cookie**, et **champ caché**.
+====
+
+=== TP 2 : Suppression de compte (Lama Zoo v3)
+
+Ce second TP illustre les attaques CSRF visant une action critique : la suppression d'un compte.
+
+**1. Dossiers inclus**
+[cols="1,2", options="header"]
+|===
+| Dossier | Description
+| `victime_noprotection/` | Victime sans protection CSRF (vulnérable).
+| `victime_synchronizer/` | Protection CSRF par **Synchronizer Token Pattern**.
+| `victime_double_submit/` | Protection CSRF par **Double Submit Cookie Pattern**.
+| `attaque/` | Faux site malveillant simulant 3 attaques différentes.
+|===
+
+**2. Scénario d'attaque**
+
+1. **Se connecter comme parrain** : Allez sur `victime_xxx/login.php` (cela simule une session ouverte).
+2. **Simuler une attaque** via la page : `http://localhost/attaque/accueil.html`.
+3. **Choisir une attaque** :
+- `attaque_noprotection.html` → suppression réussie.
+- `attaque_sync.html` → suppression échouée (Synchronizer).
+- `attaque_double.html` → suppression échouée (Double Submit).
+4. **Vérifier le fichier `suppr.log`** dans chaque dossier victime.
+
+**3. Détail des protections étudiées**
+
+* **Synchronizer Token Pattern :** Le token CSRF est stocké en session côté serveur. Le formulaire contient un champ caché avec ce token. À la soumission, le serveur compare les deux.
+* **Double Submit Cookie Pattern :** Le token est généré côté serveur puis envoyé dans un cookie ET dans un champ caché du formulaire. À la réception, le serveur compare ces deux éléments fournis par le client.
+
+[NOTE]
+.Réflexion & Evolutions possibles
+====
+* Essayer deviner quelle application est vulnérable avant de lire le code.
+* Essayez de bloquer l’attaque par d’autres moyens (captcha comme site de cantine ENC, entête custom, etc.).
+* Ajoutez une confirmation JS ou une alerte pour améliorer l’UX (UX = Interface utilisateur).
+====
+
+=== Discussion de synthèse
+
+On vous demande dans le contexte d’un stage de présenter les différences, dans le cadre d’un développement PHP, entre **champ caché**, **SESSION** et **cookies** :
+Expliquez leur fonctionnement, ainsi que leurs avantages et inconvénients.
+
+
+== Partie 2 : Étude de cas (Cas Lama 2023)
+
+_En vous aidant des annexes fournies en Partie 3, répondez aux missions suivantes :_
+
+link:documentation/23SI6SLAM-1_Lama_Zoo_Sujet_BAT_2023.docx[Télécharger l'étude de cas originelle : Lama Zoo (Format Word)]
+
+L’équipe informatique du parc zoologique souhaite répondre à une menace. Mme Delperouze vous adresse le message suivant :
+
+[quote, Mme Delperouze]
+____
+Il semble que nous soyons victimes d’une attaque de type CSRF (cross site request forgery), selon le scénario suivant : un parrain reçoit un message contenant de fausses nouvelles de ses parrainages et clique sur un lien contenu dans celui-ci alors qu’une session est ouverte dans son navigateur sur notre site. Le clic sur ce lien entraîne la suppression de son compte.
+
+Notre site a été développé à partir du framework PHP CodeIgniter et je sais que celui-ci intègre directement des mécanismes de protection contre les attaques CSRF. Je vous transfère la documentation technique en pièce jointe. Merci de nous proposer une solution simple à mettre en œuvre, qui nous assure de ne plus être vulnérables face à ce type d’attaque à l’avenir.
+____
+
+**Question C.3 :**
+
+1. Indiquer pour chacune des deux solutions de protection contre les attaques CSRF proposées par l’environnement de développement CodeIgniter les éléments de sécurisation stockés côté client et ceux stockés côté serveur.
+2. Indiquer les modifications à apporter aux classes `Security` et `Filters` afin d’activer la protection CSRF basée sur la session (Synchronizer token) et préciser ce que les développeurs des vues devront utiliser dans les formulaires qu'ils veulent protéger.
+
+***
+
+Mme Nadia Erben a développé une interface de programmation d'application (API) permettant d'accéder en lecture aux bases de données des applications du parc.
+Depuis que vous avez mis en place, avec succès, la protection contre les attaques CSRF, les requêtes de l'interface API ne renvoient plus la réponse attendue.
+
+Mme Erben indique que les données qu’elle met à disposition sont publiques et en lecture seule. Elle indique également qu’il est impossible de faire un scénario d’attaque CSRF qui ait un sens en utilisant les routes qui concernent les traitements de l'interface API (routes qui commencent par `'/ws/…'`). Elle souhaite que la protection contre les attaques CSRF ne s’applique pas à ces routes.
+La documentation de l’environnement de développement CodeIgniter suggère l’utilisation d’une liste blanche (whitelist) pour permettre à certaines routes d'échapper au filtre CSRF.
+
+**Question C.4 :**
+
+1. Expliquer pourquoi les routes de l'interface API ne répondent plus depuis la mise en place de la protection contre les attaques CSRF.
+2. Indiquer les modifications à apporter à la classe `Filters` afin de mettre en place une liste blanche en vous aidant du fichier de configuration des routes.
+
+
+== Partie 3 : Annexes techniques
+
+=== Document B2 : Code de la vue coms.php
+
+[source,php]
+----
+<?php
+echo "<br/>";
+foreach ($coms as $com){
+    echo $com."<br/>";
+}
+/** $vecu contient true si l’utilisateur connecté a participé à cet atelier **/
+if($vecu){
+    echo('<a href="'.base_url().'/ateliers/commentform/'.$numAtelier.'">Ajouter un commentaire</a>');
+}
+?>
+----
+
+=== Document B3 : CodeIgniter - Fichier de configuration des routes
+_Les routes nécessaires à la réalisation du sujet sont indiquées ici._
+
+[source,php]
+----
+// Route Definitions
+// We get a performance increase by specifying the default
+// route since we don't have to scan directories.
+$routes->get('/ateliers', 'AteliersController::index');
+$routes->get('/ateliers/comments/(:num)', 'AteliersController::comments/$1');
+$routes->get('/ateliers/commentform/(:num)', 'AteliersController::commentForm/$1',['filter' => 'authGuard']);
+$routes->post('/ateliers/commentstore', 'AteliersController::commentStore',['filter' => 'authGuard']);
+$routes->get('/', 'AccueilController::index');
+$routes->get('/inscription', 'InscriptionController::index');
+$routes->match(['get', 'post'], 'inscrire', 'InscriptionController::store');
+$routes->match(['get', 'post'], 'connecter', 'ConnexionController::loginAuth');
+$routes->get('/connexion', 'ConnexionController::index');
+$routes->get('/profil', 'ProfilController::index',['filter' => 'authGuard']);
+$routes->post('/profil/supprcmptconfirm', 'ProfilController::supprcmpt',['filter' => 'authGuard']);
+$routes->get('/parrainage', 'ParrainageController::index');
+$routes->get('/parrainage/parrainer/(:num)', 'ParrainageController::parrainerForm/$1',['filter' => 'authGuard']);
+$routes->post('/parrainage/parrainagestore', 'ParrainageController::parrainageStore',['filter' => 'authGuard']);
+$routes->get('/parrainage/tableau', 'ParrainageController::tableau');
+$routes->get('/disconnect', 'DisconnectController::index',['filter' => 'authGuard']);
+
+// Routes de l'API :
+$routes->match(['get', 'post'],'/ws/animaux', 'WSAnimauxController::getAnimaux');
+$routes->match(['get', 'post'],'/ws/hebergements', 'WSHebergementsController::getHebergement');
+$routes->match(['get', 'post'],'/ws/ateliers', 'WSAtelierController::getAteliers');
+----
+
+=== Document B4 : CodeIgniter - Extraits des classes Security et Filters
+
+[source,php]
+----
+class Security extends BaseConfig
+{
+    public $csrfProtection = 'cookie';
+    public $tokenRandomize = false;
+    public $tokenName = 'csrf_test_name';
+    public $headerName = 'X-CSRF-TOKEN';
+    // ...
+}
+
+class Filters extends BaseConfig
+{
+    /** Configure des alias pour les filtres */
+    public $aliases = [
+        'csrf'          => CSRF::class,
+        'toolbar'       => DebugToolbar::class,
+        'honeypot'      => Honeypot::class,
+        'invalidchars'  => InvalidChars::class,
+        'secureheaders' => SecureHeaders::class,
+        'authGuard'     => \App\Filters\AuthGuard::class,
+    ];
+
+    /** Liste d’alias de filtres exécutés avant et après chaque requête */
+    public $globals = [
+        'before' => [ 'honeypot', 'invalidchars', ],
+        'after'  => [ 'toolbar', ],
+    ];
+    // ...
+}
+----
+
+=== Document B5 : CodeIgniter - Classe de filtres AuthGuard
+
+[source,php]
+----
+class AuthGuard implements FilterInterface
+{
+    public function before(RequestInterface $request, $arguments = null)
+    {
+        if (!session()->get('isLoggedIn'))
+        {
+            return redirect()->to('/connexion');
+        }
+    }
+    // ...
+}
+----
+
+=== Document B6 : CodeIgniter - Documentation sur la méthode esc()
+
+`esc($data[, $context = 'html'[, $encoding]])`
+
+* **Paramètres :**
+** `$data` (string \| array) – les données à échapper.
+** `$context` (string) – le contexte d’échappement (valeur `html` par défaut). Les valeurs valides sont : `html`, `js`, `css`, `url`, `attr`, `raw`.
+** `$encoding` (string) – l’encodage utilisé lors de l’échappement.
+* **Retour :** Les données du paramètre `$data` échappées selon le contexte fourni.
+Par exemple, `esc('<br>', 'html')` retournera `&lt;br&gt;`.
+
+Échappe les données pour les inclure dans les pages Web, afin d'aider à prévenir les attaques XSS. Utilise la bibliothèque Laminas Escaper pour gérer le filtrage réel des données. Si `$data` est une chaîne, elle est échappée simplement et renvoyée. Si `$data` est un tableau, il est parcouru, et les valeurs des paires clé/valeur sont échappées.
+
+=== Document C2 : Comment se protéger des attaques CSRF
+
+Le projet OWASP propose différentes approches pour se prémunir des attaques CSRF qui diffèrent selon que des informations sont ou non stockées côté serveur.
+
+**Protection CSRF avec le patron de conception Synchronizer Token Pattern**
+Il s’agit lors d’une session de générer sur le serveur un identifiant d’accès unique, nommé jeton (token) CSRF, non prédictible et avec une durée de validité limitée dans le temps. Ce jeton est stocké en variable de session et ajouté dans un champ caché d’un formulaire ou dans un paramètre de l’identifiant URI pour chaque action sensible à sécuriser (déconnexion, modification/suppression de données en BDD, etc.).
+
+image::STP.png[Schéma du Synchronizer Token Pattern]
+_(Schéma copié de l'EDC LAMA du réseau CERTA)_
+Lorsque le serveur reçoit une requête, il vérifie que le jeton stocké en variable de session et celui transmis correspondent bien. Si ce n'est pas le cas, la requête est rejetée comme étant une tentative d’attaque CSRF.
+
+**Protection CSRF avec le patron de conception Double Submit Pattern :**
+Il s’agit également de faire générer un jeton CSRF par le serveur mais celui-ci n’est pas stocké en variable de session sur le serveur mais envoyé au client lors de la génération de la page HTML sous deux formes distinctes : un témoin de connexion (cookie) envoyé de manière habituelle dans les entêtes de la requête HTTP et un jeton envoyé dans le corps de la requête (par exemple dans un champ caché d'un formulaire).
+
+image::DSP.png[Schéma du Double Submit Pattern]
+_(Schéma copié de l'EDC LAMA du réseau CERTA)_
+
+Lorsque le serveur reçoit une requête, il vérifie que les deux jetons transmis (celui du cookie et celui du formulaire) correspondent bien. Si les deux informations ne sont pas présentes ou ne correspondent pas, la requête est rejetée.
+
+=== Document C3 : CodeIgniter - Extraits de doc sur la protection CSRF
+
+**Activer la protection contre les attaques CSRF**
+Pour activer la protection CSRF, il faut activer le filtre `csrf` avant l’exécution des requêtes dans le tableau `$globals` de la classe de configuration `Filters` (document B4).
+
+Dans l’environnement de développement CodeIgniter, par défaut, la protection contre les attaques CSRF basée sur les témoins de connexion est utilisée (patron de conception _double submit cookie_).
+Pour activer la protection contre les attaques CSRF basée sur la session (patron de conception _synchronizer token_) il faut attribuer la valeur `'session'` à la propriété publique `$csrfProtection` dans la classe de configuration `Security`.
+
+Certaines routes peuvent être ajoutées à une liste blanche afin qu'elles ne soient pas protégées par la protection contre les attaques CSRF du logiciel CodeIgniter. Pour cela, vous pouvez ajouter ces routes en tant qu'exceptions dans le filtre `csrf` exécuté avant chaque requête. Il est possible d'utiliser des expressions régulières (regex) pour écrire ces exceptions.
+
+Dans l’exemple suivant, la route `api/record/save` et toutes les routes de la forme `test/1`, `test/2`, etc. et les routes qui commencent par `dev` échappent au filtre `csrf` :
+[source,php]
+----
+'csrf' => ['except' => ['api/record/save', 'test/[0-9]+', 'dev*']]
+----
+
+**Paramétrer les formulaires HTML avec les fonctions `csrf_token()`, `csrf_hash()` et `csrf_field()`**
+Si vous utilisez la bibliothèque `form_helper`, l’appel à la fonction `csrf_field()` générera dans votre formulaire un champ caché contenant un jeton (token) CSRF :
+[source,php]
+----
+<?= csrf_field() ?>
+// Génère:  <input type="hidden" name="{csrf_token}" value="{csrf_hash}" />
+----
+
+Si vous n’utilisez pas la bibliothèque `form_helper`, vous pouvez utiliser les fonctions `csrf_token()` et `csrf_hash()` dans un champ caché créé manuellement dans votre formulaire :
+[source,html]
+----
+<input type="hidden" name="<?= csrf_token() ?>" value="<?= csrf_hash() ?>" />
+----

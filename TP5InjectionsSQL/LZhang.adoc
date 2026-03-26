@@ -1,0 +1,71 @@
+= Compte rendu de TP : Cybersécurité (Luc ZHANG)
+:author: ZHANG Luc
+:toc: left
+:imagesdir: imgzhang
+:icons: font
+:source-highlighter: rouge
+
+== Challenges
+
+=== Challenge 1
+*Commentaire de l'étudiant :*
+_Pour résoudre ce lab, j'ai intercepté la requête avec Burp Suite et modifié le paramètre de catégorie en ' OR 1=1-- afin de rendre la condition toujours vraie et de mettre en commentaire la restriction de publication, forçant ainsi l'affichage de tous les produits, même ceux cachés._
+
+image::Capture d'écran 2026-02-12 162111.png[Challenge numéro 1]
+
+[green]#**Correction / Commentaire :**#
+[green]#Très bien d'avoir expliqué la démarche technique en plus de la capture. La manipulation est parfaitement décrite.#
+
+=== Challenge 2
+image::Capture d'écran 2026-02-12 162121.png[Challenge numéro 2]
+
+=== Challenge 3
+image::Capture d'écran 2026-02-12 162132.png[Challenge numéro 3]
+
+=== Challenge 4
+image::Capture d'écran 2026-02-12 162141.png[Challenge numéro 4]
+
+---
+
+== Réponses aux questions :
+
+=== Q1 : Dans le Lab 1, pourquoi l’ajout de OR 1=1 permet-il d’afficher des données qui étaient censées être cachées ? Expliquez la logique booléenne.
+
+*Réponse de Luc ZHANG :*
+_L'ajout de OR 1=1 crée une tautologie au sein de la clause WHERE. En logique booléenne, l'opérateur OR renvoie la valeur "VRAI" si l'une des deux conditions est remplie. Puisque l'expression 1=1 est universellement vraie, la condition globale devient vraie pour chaque ligne de la table, forçant le système à afficher l'intégralité des données, contournant ainsi le filtrage initial._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Excellent.** L'utilisation du terme "tautologie" est parfaite ici. L'explication mathématique de la logique booléenne est irréprochable.
+Il vous faudra être capable de répondre dorénavant à la question: "est ce une tautologie ? Pourquoi ?"#
+
+=== Q2 : Dans le Lab 2, quel est le rôle précis des caractères -- (ou # selon la base de données) à la fin de votre injection ? Pourquoi cela permet-il de se passer du mot de passe ?
+
+*Réponse de Luc ZHANG :*
+_Ces caractères servent à transformer le reste de la requête SQL originale en commentaire, ce qui signifie que le moteur de base de données l'ignore totalement. En plaçant ces symboles juste après l'identifiant, on neutralise la partie du code qui vérifie le mot de passe (AND password = '...'). Cela permet de valider l'authentification uniquement sur la base du nom d'utilisateur._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Parfait.** Vous avez bien identifié que la vérification du mot de passe est "neutralisée" car elle passe en commentaire.#
+
+=== Q3 : Dans le Lab 3 (UNION), pourquoi est-il obligatoire de connaître le nombre exact de colonnes avant de pouvoir extraire des données ? Que se passe-t-il si les deux requêtes n’ont pas la même structure ?
+
+*Réponse de Luc ZHANG :*
+_L'opérateur UNION exige que les deux requêtes (la légitime et l'injectée) possèdent le même nombre de colonnes et des types de données compatibles. Si les structures diffèrent, le moteur SQL génère une erreur et refuse d'exécuter la commande. Il est donc obligatoire de déterminer ce nombre (souvent par tâtonnement avec ORDER BY) pour aligner notre injection sur la structure de la table ciblée._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Très complet.** Vous mentionnez les "types de données compatibles" et la méthode "ORDER BY" pour le tâtonnement. C'est exactement la réponse attendue.#
+
+=== Q4 : Quelle est la meilleure méthode de protection (côté code PHP/Java/C#) pour empêcher totalement les injections SQL, rendant les caractères comme ' ou OR inefficaces ?
+
+*Réponse de Luc ZHANG :*
+_La protection la plus efficace est l'utilisation de requêtes préparées (Prepared Statements) avec liaison de paramètres. Contrairement à la concaténation de chaînes, cette méthode sépare la logique de la requête des données fournies par l'utilisateur. Le code SQL est pré-compilé par le serveur, et les entrées utilisateur sont traitées comme de simples littéraux (du texte brut), rendant les caractères spéciaux comme ' ou les mots-clés comme OR totalement inoffensifs._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Remarquable.** Vous allez au-delà de la simple réponse en expliquant *pourquoi* ça marche (pré-compilation, traitement en littéraux/texte brut). C'est un niveau de compréhension avancé. Il faudra néanmoins que vous puissiez dorénavant répondre à la question: quels sont les différences entre langage interprété, pré compilé et compilé ?#
+
+=== Q5 : Dans une injection SQL "Blind" (Aveugle), l’attaquant ne voit jamais les données s’afficher à l’écran. Comment fait-il alors pour voler un mot de passe entier ? Pourquoi cette technique est-elle beaucoup plus lente qu’une injection UNION classique ?
+
+*Réponse de Luc ZHANG :*
+_Dans une injection "Blind", l'attaquant ne reçoit aucun retour direct de données. Il procède par inférence en posant des questions binaires (Vrai/Faux) au serveur (ex: "Le premier caractère du mot de passe commence-t-il par 'A' ?"). Il observe ensuite la différence dans la réponse HTTP ou le temps de réponse (Time-based). Cette technique est beaucoup plus lente que l'injection UNION car elle nécessite de tester chaque caractère de chaque champ, un par un, ce qui multiplie considérablement le nombre de requêtes nécessaires pour extraire une seule information._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Sans faute.** Le concept d'inférence (devinette binaire) est parfaitement maîtrisé, tout comme la raison de la lenteur (volume de requêtes). J'attend que vous puissiez dorénavant distinguer et commenter les 3 modes de raisonnement par inférence#

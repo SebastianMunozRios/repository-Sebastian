@@ -1,0 +1,78 @@
+= Compte rendu de TP : BLOC 3 04-Atelier Sessions Portswigger
+:author: Steve Zhou
+:toc: left
+:imagesdir: imgzhou
+:icons: font
+
+== Challenges
+
+=== Challenge 1
+NOTE: Pas de capture d'écran prise, validé à l'écran durant la séance.
+
+=== Challenge 2
+image::img.png[Capture Challenge 2]
+
+=== Challenge 3
+image::img_1.png[Capture Challenge 3]
+
+---
+
+== Réponses aux questions
+
+=== Q1 : Pourquoi la gestion par cookie est-elle dangereuse ?
+
+*Réponse de Steve Zhou :*
+_C'est dangereux car le cookie est stocké côté client, ce qui permet à l'utilisateur de le modifier facilement (via Burp Suite ou la touche F12). En changeant `false` en `true`, il peut usurper l'identité d'un administrateur et accéder à des fonctions réservées sans autorisation._
+
+[green]#**Correction / Commentaire :**#
+[green]#Très bonne réponse. Le stockage côté client est effectivement vulnérable car l'utilisateur a un contrôle total sur ces données.#
+
+=== Q2 : Quelle est la bonne méthode côté serveur ?
+
+*Réponse de Steve Zhou :*
+_On récupère le rang en base de données lors de la connexion, puis on le stocke dans une variable `$_SESSION`. Il suffit ensuite de placer une condition `if` au début de chaque page sensible pour bloquer l'accès si l'utilisateur n'est pas admin._
+
+[green]#**Correction / Commentaire :**#
+[green]#Exactement. Vous avez bien décrit le mécanisme de session sécurisé : vérification côté serveur et non côté client.#
+
+=== Q3 : Quel élément technique permet de distinguer le bon login dans Burp ?
+
+*Réponse de Steve Zhou :*
+_C'est la taille de la réponse (Length). Toutes les mauvaises tentatives renvoient une page d'erreur identique avec le même nombre d'octets. Dès que le login est correct, la réponse change (ex : message de succès), ce qui crée une longueur différente dans le tableau de Burp Suite Intruder._
+
+[green]#**Correction / Commentaire :**#
+[green]#C'est tout à fait ça. La variation de la longueur (Length) trahit souvent une différence dans le message affiché par le serveur.#
+
+=== Q4 : Quelle "Bonne Pratique" de développement (vue en cours) permettrait d’empêcher cette attaque ?
+
+*Réponse de Steve Zhou :*
+_Il faut mettre un blocage après plusieurs tentives d'échecs comme 3x ou 4x._
+
+[green]#**Correction / Commentaire :**#
+
+[green]#Attention, il y a une confusion ici. Le blocage après échecs (Rate Limiting) empêche le **Brute Force** (deviner le mot de passe).#
+[green]#Mais pour empêcher l'**énumération** (deviner si un login existe), la bonne pratique est d'utiliser des **messages d'erreur génériques**. L'application doit répondre "Identifiant ou mot de passe incorrect" dans tous les cas. Si elle répond "Utilisateur inconnu", le blocage ne sert à rien : l'attaquant sait déjà que le compte n'existe pas.#
+
+=== Q5 : Quelle était la structure exacte du cookie décodé ? (Exemple : Login + Date, Login + Hash, etc.).
+
+*Réponse de Steve Zhou :*
+_La structure exacte du cookie décodé est sous base64 (par ex: username:password) et le hash en MD5._
+
+[green]#**Correction / Commentaire :**#
+[green]#C'est presque ça, mais attention à la précision : la structure est `username:MD5(password)`. Le mot de passe n'est pas en clair ("password") puis hashé à part, c'est bien le hash du mot de passe qui est concaténé au nom d'utilisateur._#
+
+=== Q6. Pourquoi l’utilisation de l’algorithme MD5 pour hasher le mot de passe dans le cookie est-elle une faiblesse critique aujourd’hui ?
+
+*Réponse de Steve Zhou :*
+_Parce que l'algorithme est beaucoup trop rapide et on peut obtenir le password grâce à des sites comme Crack Station._
+
+[green]#**Correction / Commentaire :**#
+[green]#Correct. La rapidité de calcul de MD5 permet aux attaquants de tester des milliards de combinaisons ou d'utiliser des Rainbow Tables (comme CrackStation) pour retrouver le mot de passe instantanément.#
+
+=== Q7. Si le développeur avait utilisé un "Grain de sel" (Salt) aléatoire inconnu de l’attaquant pour générer le hash, l’attaque aurait-elle fonctionné ? Justifiez.
+
+*Réponse de Steve Zhou :*
+_Le salt ajoute des textes aléatoires qui rend chaque hash unique. Grâce à lui, deux mots de passe identiques (ex: 1234) ne se ressemblent plus du tout une fois stockés. Cela empêche les pirates d'utiliser des listes de réponses toutes prêtes : ils sont obligés de s'attaquer à chaque compte un par un, ce qui devient quasi impossible et prendrait trop de temps._
+
+[green]#**Correction / Commentaire :**#
+[green]#Excellente justification. Vous avez parfaitement compris le rôle du sel pour contrer les tables pré-calculées (Rainbow Tables).#

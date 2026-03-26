@@ -1,0 +1,605 @@
+= Sécurisation des applications Web : Séance 2
+:authorinitials: Patrice Dignan & OWASP Mutillidae
+:author: Timothée Robert (portage ADOC et compléments)
+:toc: left
+:toc-title: Sommaire
+:icons: font
+:source-highlighter: rouge
+:imagesdir: images
+:sectnums:
+
+== Partie 1 : Bases Théoriques et Mécanismes
+Avant d'attaquer les failles, il est essentiel de comprendre comment fonctionne le web "normalement".
+
+=== Le protocole HTTP et la gestion d'état
+
+HTTP est un protocole **sans état** (Stateless). Cela signifie que par défaut, le serveur web ne se "souvient" pas de vous entre deux clics.
+
+.Le problème de l'amnésie du serveur
+[NOTE]
+====
+Sans mécanisme de session, si vous vous connectez sur la page A, le serveur vous a déjà oublié quand vous arrivez sur la page B. Il faudrait retaper son mot de passe à chaque page !
+====
+
+**La solution : Le Cookie de Session** +
+C'est l'équivalent d'un "bracelet de festival" ou d'un "ticket de vestiaire".
+
+1. Lors de l'authentification réussie, le serveur vous donne un **Identifiant de Session** (souvent stocké dans un cookie appelé `PHPSESSID` ou `JSESSIONID`).
+2. À chaque nouvelle requête, votre navigateur renvoie automatiquement ce cookie.
+3. Le serveur vérifie le cookie et retrouve vos informations (panier, infos compte) dans sa mémoire.
+
+=== Le triptyque AAA (Identification, Authentification, Autorisation)
+
+Il ne faut pas confondre ces trois termes :
+
+* **Identification (Qui êtes-vous ?)** : C'est déclarer son identité (ex: saisir le login `admin`).
+* **Authentification (Prouvez-le !)** : C'est fournir la preuve de cette identité (ex: saisir le mot de passe `1234`).
+* **Autorisation (Qu'avez-vous le droit de faire ?)** : Ce sont les droits accordés une fois authentifié (ex: accès à la page `/admin`).
+
+-> *Dans ce TP, nous attaquerons successivement ces trois piliers.*
+
+=== III. Stockage des Mots de passe
+
+Pour se protéger si la base de données est volée, on ne stocke jamais les mots de passe en clair.
+
+* **Hachage (Hash)** : Une fonction mathématique irréversible transforme le mot de passe en empreinte (ex: `a94a8fe5...`). Cf 1er semestre
+* **Salage (Salt)** : On ajoute des caractères aléatoires au mot de passe avant de le hacher. Cela empêche les pirates d'utiliser des "Rainbow Tables" (immenses listes de hachages pré-calculés) pour retrouver le mot de passe original. Cf 1er semestre
+
+<<<
+
+== Activités OWASP (Authentification & Sessions)
+
+=== Présentation générale
+
+==== Le risque Broken Authentication
+Ce risque est premier en 2025 et 2021, A01:2025 - Broken Access Control.
+
+Lors du développement d’une application, le codage des fonctions liées à l’authentification et à la gestion des sessions (cookie de session) peuvent être incorrectement implémentées, permettant ainsi à des attaquants de compromettre des mots de passe et des identifiants de session.
+
+==== Conséquences
+En cas de force brute sur des mots de passe ou de vol d’identifiant de session (session hijacking), une personne malveillante peut s’identifier avec le compte d’un autre utilisateur voire avec celui de l’administrateur.
+
+Les conséquences peuvent être particulièrement graves sur une application manipulant des données hautement confidentielles (applications médicales, bancaires…).
+
+Par ailleurs, le Règlement général sur la protection des données (RGPD) renforce l’obligation des entreprises d’assurer la sécurité des données manipulées.
+
+Si le codage est mal implémenté, l’application web risque d’offrir les vulnérabilités suivantes :
+
+* **Énumération & Force Brute :** Tests d’authentification possibles sur des listes de login et de mots de passe.
+* **Mots de passe par défaut :** Identification via des comptes par défaut (glpi/glpi, nagios/nagiosadmin, admin/cisco, etc.).
+* **Mots de passe faibles :** Création autorisée de comptes avec des mots de passe triviaux (admin, password1).
+* **Récupération de compte :** Codage non sécurisé des fonctions "Mot de passe oublié".
+* **Stockage non sécurisé :** Mots de passe en dur, non chiffrés ou sans salage.
+* **Session Management :** Cookies de session prévisibles, exposés dans l’URL, sans rotation ni timeout.
+
+==== Bonnes pratiques
+Les contre-mesures suivantes peuvent être mises en place :
+
+* **Messages génériques :** Ne pas indiquer la raison précise d’un échec (ne pas dire "Login incorrect", mais juste "Échec d'authentification").
+* **Politique de mot de passe :** Imposer un changement à la première connexion, interdire les mots de passe du dictionnaire, imposer une complexité.
+* **Stockage :** Externaliser et hasher avec salage (salt) pour contrer les Rainbow Tables.
+* **Multi-facteurs (MFA) :** Pour les applications sensibles.
+* **Cookies de session :** Générer des IDs non prévisibles, rotation après authentification, destruction à la déconnexion, timeout.
+
+=== Objectifs et architecture de l’activité
+
+Trois défis sont proposés :
+
+1.  **L’énumération des logins :** Identifier des logins valides via les messages d'erreur.
+2.  **Attaque par Force Brute :** Trouver le mot de passe d'un login valide.
+3.  **Vol de session :** Usurper une identité via un cookie prévisible.
+
+**Environnement technique :**
+
+Vous pouvez tout faire sur votre machine ou alors en binôme, exemple ci dessous:
+
+* **Machine attaquante :** 10.0.210.11 (Navigateur + Proxy Burp Suite)
+* **Serveur web :** 10.0.210.20 (Mutillidae / OWASP)
+
+.Architecture du réseau pour l'activité
+image::02-Architecture.png[Schéma architecture : Navigateur/Burp <-> Serveur OWASP]
+
+Le serveur Mutillidae permet de définir le niveau de sécurité (Security Level).
+
+* **Niveau 0 (Hosed) :** Non sécurisé (notre point de départ).
+* **Niveau 5 (Secure) :** Sécurisé (pour analyser les correctifs).
+
+=== Premier défi : Énumération des logins
+
+==== Objectif
+Obtenir une liste de logins valides à l’aide d’un dictionnaire en exploitant la verbosité des erreurs d'un Web Service SOAP.
+
+L’objectif est d’obtenir une liste de logins valides testés à l’aide d’un dictionnaire. Lorsque le développeur indique la raison d’un échec d’authentification (login incorrect), un attaquant peut profiter de ces messages d’échec afin de tester des listes de login en comparant les réponses obtenues entre un succès et un échec d’authentification.
+
+L’énumération des logins est envisageable, quel que soit le type d’interaction entre les clients et le serveur : nous aurions pu appliquer la démarche décrite plus bas pour une authentification "classique" basée sur des pages HTML/PHP ; nous avons choisi de travailler sur une authentification passant par un service web basé sur un protocole de communication de type SOAP.
+
+Les services web sont de plus en plus utilisés. Ils facilitent la communication entre applications hétérogènes :  ils servent beaucoup pour interconnecter les systèmes d’informations ; on les retrouve aussi dans les services mis à disposition par un cloud.
+
+Mutillidae permet d’aborder un certain nombre de problèmes de sécurité posés par ces services web : l’énumération des logins est donc le premier que nous rencontrerons.
+
+.Pour aller plus loin sur les services web
+****
+OWASP propose une page dédiée aux services web et aux problèmes de sécurités associés : +
+https://cheatsheetseries.owasp.org/cheatsheets/Web_Service_Security_Cheat_Sheet.html
+****
+
+==== À vous de jouer (Voir Dossier 1 pour le pas-à-pas)
+
+**Mode non sécurisé (Level 0)**
+
+1.  Installer l’extension **Wsdler** dans Burp (cf. Dossier 1).
+2.  Positionner le niveau de sécurité à **0**.
+3.  Tester une requête avec un login **non valide** (ex: `gero et`).
+4.  Tester une requête avec un login **valide** (ex: `utilisateur1`).
+5.  Créer un dictionnaire de logins (fichier texte).
+6.  Lancer l’énumération avec **Burp Intruder**.
+7.  *Question :* Quelles sont les lignes de la réponse qui permettent de distinguer un bon login d'un mauvais ?
+
+[TIP]
+.Astuce d'expert : Le Temps de Réponse
+====
+Parfois, le serveur ne renvoie pas de message d'erreur différent. Dans ce cas, observez la colonne **"Time"** (temps de réponse) dans l'Intruder.
+Il arrive que la base de données mette quelques millisecondes de plus à répondre quand un utilisateur **existe** (car elle va chercher ses infos) que quand il n'existe pas. C'est ce qu'on appelle une attaque par canal auxiliaire (Timing Attack).
+====
+
+**Mode sécurisé (Level 5)**
+
+1.  Fermer/Relancer Burp. Positionner le niveau de sécurité à **5**.
+2.  Relancer l’attaque.
+3.  *Question :* Les informations sont-elles toujours exploitables ?
+4.  Chercher dans le code source de `ws-user-account.php` (`c:\laragon\www\mutillidae\webservices\soap\`) le mécanisme de protection.
+5.  *Question :* Expliquer le rôle de l'instruction `EncodeforHTML`.
+
+==== Bonnes pratiques
+* Ne pas indiquer la cause d'un échec.
+* Encoder les messages de sortie.
+
+=== Deuxième défi : Force brute sur un mot de passe
+
+==== Objectif
+Réaliser une force brute pour trouver le mot de passe du compte `admin`.
+
+==== À vous de jouer (Voir Dossier 2 pour le pas-à-pas)
+
+**Mode non sécurisé**
+
+1.  Préparer l’attaque en interceptant une tentative de login.
+2.  Lancer la force brute avec **Burp Intruder**.
+
+**Mode sécurisé & Analyse**
+
+1.  Passer en niveau de sécurité **5**.
+2.  Relancer l'attaque. Échoue-t-elle ?
+3.  Observer le code de `register.php`. Peut-on créer un mot de passe faible en niveau 5 ?
+4.  *Question :* Côté administrateur, quelles mesures permettent de détecter ce type d’attaque ? (IPS, Fail2Ban...).
+
+==== Bonnes pratiques
+* limitation de l’attaque : le développeur doit rajouter des fonctions permettant de tester la sécurité d’un mot de passe au moment de la création d’un compte en empêchant l’utilisation d’un mot de passe non sécurisé
+* empêcher l’attaque : côté administrateur système, les systèmes de prévention des intrusions peuvent bloquer les attaques de type force brute.
+
+=== Troisième défi : Vol de session
+
+==== Objectif
+Se connecter au compte d'un autre utilisateur sans connaitre son mot de passe, en prédisant son cookie de session.
+
+==== À vous de jouer (Voir Dossier 3 pour le pas-à-pas)
+
+**Vol de session**
+
+1.  Intercepter le cookie d’un utilisateur authentifié.
+2.  Modifier l'identifiant (`uid`) dans le cookie pour usurper une session.
+
+**Mode sécurisé & Analyse**
+
+1.  Passer en niveau de sécurité **5**.
+2.  La modification du cookie `uid` fonctionne-t-elle encore ?
+3.  Comparer le code source de `index.php` entre les niveaux 0 et 1/5.
+4.  *Question :* Quelle est la différence entre un cookie et une session ?
+
+.Analyse critique du Cookie
+****
+Regardez la différence entre les deux cookies reçus :
+
+* `PHPSESSID` : `5cdtq6mld2m0mvlfo...` (Long, aléatoire, impossible à deviner -> **SÉCURISÉ**)
+* `uid` : `24` (Court, séquentiel, facile à deviner -> **NON SÉCURISÉ**)
+
+C'est la notion d'**Entropie** (le désordre/le hasard). Pour qu'une session soit sûre, l'identifiant doit avoir une entropie maximale pour qu'aucun pirate ne puisse prédire le numéro suivant.
+****
+
+==== Bonnes pratiques
+* IDs de session non prévisibles (aléatoires).
+* Rotation des IDs après authentification.
+* Encodage des IDs.
+
+=== Conclusion : Tableau de synthèse
+
+[cols="1,3"]
+|===
+| **Authentification**
+| Ne pas révéler des messages d’erreur trop explicites. +
+Ne jamais stocker de mots de passe en clair (chiffrement/salage). +
+Politique de mots de passe forte (complexité, rotation).
+
+| **Gestion des sessions**
+| Générer des jetons non prévisibles. +
+Rotation et expiration des sessions (Timeout). +
+Encoder les identifiants de session.
+|===
+
+<<<
+
+=== Dossiers Documentaires (Tutoriels détaillés)
+
+==== Dossier 1 : Énumération des logins
+
+**Étape 0 : Installation de Wsdler**
+
+* Dans Burp Suite > onglet **Extensions** > **BApp Store**.
+* Sélectionner et installer **Wsdler**.
+
+.Installation de l'extension Wsdler
+image::02-Ext1.png[BApp Store : Installation de Wsdler]
+
+.Installation de l'extension Wsdler suite
+image::02-Ext2.png[BApp Store : Installation de Wsdler]
+
+* Vérifier l'installation dans l'onglet **Extensions**.
+
+.Extension installée
+image::02-Ext3.png[Onglet Extensions : Wsdler présent]
+
+**Étape 1 : Test Login Inexistant**
+
+* Aller sur la page : `OWASP 2017 > A2 > Username Enumeration > Lookup User (SOAP)`.
+* Proxy `Intercept On`. Cliquer sur `View the WSDL`.
+* Clic droit dans la requête > **Parse WSDL**.
+* Dans l'onglet **Wsdler**, vérifier les opérations et choisir `getUser`.
+
+.Opérations WSDL disponibles
+image::02-WSDL1.png[Onglet Wsdler : liste des opérations]
+
+* Observer la balise `<username>` (valeur par défaut : `gero et`).
+
+.Détail de la requête getUser
+image::02-WSDL2.png[Requête SOAP : username gero et]
+
+Faire un clic droit dans la fenêtre correspondant à la requête associée à un login inexistant (Raw) et cliquer sur Send to Repeater.
+
+L’onglet Repeater de BurpSuite ajoute un premier sous onglet correspondant à notre requête.
+
+Dans cet onglet, la partie Request correspond à la requête traitée et l’onglet Raw indique le flux capturé suite à cette requête.
+
+Cliquer sur le bouton Send pour observer la réponse correspondante.
+
+Observez le code de la réponse et plus particulièrement la phrase indiquant que l’utilisateur (login) n’existe pas (User gero et does not exist).
+
+*_Résumé_*
+
+* Envoyer au **Repeater** (Send to Repeater).
+* Envoyer la requête. Réponse : `User gero et does not exist`.
+
+.Réponse du serveur : Login inexistant
+image::02-WSDL3.png[Repeater : User does not exist]
+
+Faire un clic droit dans la fenêtre de la réponse (fenêtre de droite et cliquer sur Send to Comparer. L’onglet Comparer de BurpSuite s’enrichit de notre première réponse correspondant à un login inexistant.
+
+* Envoyer la réponse au **Comparer**.
+
+.Ajout au Comparer
+image::02-WSDL4.png[Comparer : item 1 chargé]
+
+
+Mettre le proxy à Off.
+
+**Étape 2 : Test Login Existant**
+
+* Créer un compte `utilisateur1` via le lien "Please register here".
+
+.Création de compte
+image::02-Step2-1.png[Lien d'enregistrement]
+
+
+Reproduire ensuite l’ensemble des manipulations de l’étape n°2 avec un login existant. Pour cela, positionner le proxy à intercept off puis ouvrir la page suivante :
+
+OWASP 2017 => A2 : Broken Authentication and Session Management => Username Enumeration => Lookup User (SOAP Web Service).
+
+Positionner ensuite le proxy à intercept on, puis cliquer sur le lien View the WSDL.
+
+Comme précédemment, faire un clic droit dans la fenêtre de capture du proxy et cliquer sur Parse WSDL. Puis, dans l’onglet Wsdler de BurpSuite, cliquer sur getUser et envoyer la requête au répéteur (Send to Repeater) par un clic droit.
+
+Le répéteur de BurpSuite offre maintenant un deuxième onglet correspondant à notre nouvelle requête. C’est à ce moment là qu’il faut remplacer la valeur gero et par un login valide (utilisateur1 dans la capture d’écran ci-dessous).
+
+
+* Dans le Repeater, remplacer le username `gero et` par `utilisateur1`.
+
+.Modification de la requête avec un login valide
+image::02-Step2-2.png[Repeater : username utilisateur1]
+
+* Réponse : `Results for utilisateur1`.
+* Comparer les deux réponses (Clic droit > **Send to Comparer**).
+* Observer les différences (bouton "Words").
+
+.Comparaison des réponses
+image::02-Step2-3.png[Comparer : Différences entre login valide et invalide]
+
+**Étape 3 : Intruder**
+
+Revenir dans l’onglet Repeater de BurpSuite et dans la fenêtre de réponse (fenêtre de droite) correspondant au test sur un login correct, faire un clic droit et cliquer sur Send to the Intruder. Aller ensuite dans l’onglet Intruder de BurpSuite, et cliquer sur l’onglet Positions puis sur le bouton Clear.
+
+* Envoyer la requête valide à l'**Intruder**.
+* Onglet **Positions** : Clear. Sélectionner le login `utilisateur1` > **Add**.
+
+.Configuration des positions Intruder
+image::02-Step3-1.png[Intruder : Variable sur le login]
+
+Toujours dans cette fenêtre, il faut sélectionner avec un double clic de souris la valeur correspondant au login (utilisateur1 dans cette capture d’écran) et cliquer sur le bouton Add. Nous travaillerons donc avec une seule variable, d’où le mode Sniper. D’autres modes existent et permettent de travailler avec plusieurs variables.
+
+Une fois la valeur sélectionnée, Bupsuite testera en boucle différents logins en remplaçant la variable par les valeurs indiquées dans le dictionnaire.
+
+.Configuration du paramètre
+image::02-Step3-2.png[Intruder : Variable sur le login]
+
+
+* Onglet **Payloads** : Charger un dictionnaire (liste de noms : `DicoLogin.txt`).
+
+.Exemple de dictionnaire
+image::02-Step3-3.png[Contenu du fichier DicoLogin.txt]
+
+.Contenu du fichier DicoLogin.txt
+----
+utilisateur
+totoro
+admin
+administrateur
+jean
+patrick
+harry
+fred
+----
+
+.Chargement du Payload
+image::02-Step3-4.png[Intruder : Chargement de la liste]
+
+
+Le Copy / Paste marche très bien aussi ....
+
+* Onglet **Settings** (Grep - Extract) : Ajouter un filtre.
+
+.Ajout d'un filtre Grep - Extract
+image::02-Step3-5.png[Options : Bouton Add Grep Extract]
+
+* Définir l'expression à extraire : "<account>>".
+
+.Définition de l'expression
+image::02-Step3-6.png[Filtre : Start after expression '<account>']
+
+* **Start Attack**. Les résultats s'affichent.
+
+.Résultats de l'énumération
+image::02-Step3-7.png[Intruder Results : Liste des logins trouvés]
+
+==== Dossier 2 : Force brute
+
+**Étape 1 : Préparation**
+
+Une attaque en force brute consiste à tester en boucle des mots de passe présents dans un dictionnaire. L’outil Burpsuite teste alors chacun des mots de passe en observant le code de retour ce qui permet d’identifier un succès d’authentification.
+
+Démarrer BurpSuite et positionner  mutillidae sur le niveau de sécurité 0. Placer aussi le proxy en mode de non capture en cliquant sur intercept off. Ouvrir ensuite la page permettant de s’authentifier :
+
+OWASP 2017 => A2 (Broken Authentication and Session Management) => Authentication Bypass =>Via Brute Force => Login
+
+Dans l’exemple qui suit, nous travaillons sur un compte dont le login est admin.  Dans la version que nous utilisons de Mutillidae, un compte admin existe déjà avec le mot de passe adminpass. Les manipulations suivantes pourraient être faite avec n’importe quel compte existant dont on souhaite brute forcer le mot de passe.
+
+Positionner le proxy BurpSuite à on (intercept on). Dans le champ login, saisir admin et dans le champ du mot de passe, saisir n’importe quel mot de passe erroné, puis valider en cliquant sur le bouton Login. On peut saisir n’importe quel mot de passe erroné vu que l’objectif de cette étape est juste de positionner une variable.
+
+
+* Page de login classique (`Authentication Bypass > Via Brute Force`).
+* Tenter un login `admin` avec un mot de passe faux (ex: `test`).
+
+.Page de login
+image::02-Dossier2-1.png[Formulaire de login]
+
+* Intercepter la requête POST.
+
+.Interception de la requête POST
+image::02-Dossier2-2.png[Requête brute POST login]
+
+
+
+**Étape 2 : Attaque**
+
+Faire ensuite un clic droit à l’intérieur de cette fenêtre et cliquer sur Send to Intruder.
+
+L’onglet Intruder de BurpSuite s’enrichit d’un sous onglet supplémentaire.
+
+
+* Envoyer à l'**Intruder**.
+
+.Onglet Intruder activé
+image::02-Dossier2-3.png[Onglet Intruder]
+
+* Positions : Clear. Sélectionner le mot de passe (`test`) > **Add**.
+
+.Configuration de la position du mot de passe
+image::02-Dossier2-4.png[Intruder : Variable sur le mot de passe]
+
+* Payloads : Charger une liste de mots de passe.
+
+.Contenu du fichier DicoMotsDePasse.txt
+----
+assange
+edward
+adminpass
+password
+password1
+foch
+totoro
+Test@2030
+admin
+----
+
+Puis, sélectionner par un double clic le mot de passe saisi (admin) et cliquer sur le bouton Add.
+
+.Chargement des mots de passe
+image::02-Dossier2-5.png[Intruder : Liste de mots de passe]
+
+Cliquer ensuite sur l’onglet Payload et charger un dictionnaire en cliquant sur le bouton Load dans la section Payload Options. Il faut auparavant avoir créé ce dictionnaire.
+
+.Chargement dictionnaire
+image::02-Dossier2-6.png[Intruder : Liste de mots de passe]
+
+Le lancement de l’attaque se fait en cliquant sur le bouton Start Attack.
+
+* **Start Attack**.
+* Surveiller le **Status Code**. Un code **302** (Redirection) indique le succès (le mot de passe `adminpass` ici).
+
+.Résultat : Code 302 trouvé
+image::02-Dossier2-7.png[Intruder Results : Ligne adminpass en surbrillance]
+
+Les lignes associées à un code de status de 302 correspondent à un succès d’authentification. Le mot de passe du compte admin est donc adminpass.
+
+
+==== Dossier 3 : Vol de Session
+
+**Étape 1 : Interception**
+
+Tout d’abord, commencer par se déconnecter de Mutillidae et positionner le proxy en non interception en cliquant sur intercept off. Redémarrer aussi le navigateur.
+Démarrer BurpSuite et positionner Mutillidae avec le niveau de sécurité à 0. Puis ouvrir la page suivante :
+
+OWASP 2017 => A2 : Broken Authentication and Session Management => Privilege Escalation => Login
+
+Saisir un login et un mot de passe correspondant à un compte existant (utilisateur1 dans cet exemple). Puis valider en cliquant sur le bouton Login.
+
+
+* Se connecter avec `utilisateur1`.
+
+.Utilisateur connecté
+image::02-Dossier3-1.png[Barre d'état : Logged In User utilisateur1]
+
+* Activer l'interception et cliquer sur **Home**.
+
+.Navigation vers Home
+image::02-Dossier3-2.png[Lien Home]
+
+* Repérer les cookies dans l'onglet **Params** (notamment `uid`).
+
+.Capture des cookies
+image::02-Dossier3-3.png[Proxy Params : Liste des cookies]
+
+**Étape 2 : Exploitation**
+
+* Modifier le cookie à la volée : remplacer `uid=24` par `uid=1`.
+
+.Modification du cookie UID
+image::02-Dossier3-4.png[Modification de la valeur uid à 1]
+
+* Cliquer sur **Forward**.
+* Vérifier si vous êtes connecté en tant qu'Admin (`Logged In Admin: admin`).
+
+.Session volée : Admin connecté
+image::02-Dossier3-5.png[Barre d'état : Logged In Admin admin]
+
+<<<
+
+== Challenge cURL (Session)
+
+=== Le Challenge
+
+. **Installation :** Installez les 2 fichiers `session.php` et `supprime.php` dans un répertoire visible par Laragon.
+
+.Fichier session.php
+[source,php]
+----
+<?php
+session_start();
+
+if (isset($_GET['nom']) || isset($_SESSION['nom'])){
+    $nom = (isset($_GET['nom'])) ? $_GET['nom'] : $_SESSION['nom'] ;
+    echo "bonjour $nom <BR>" ;
+    echo "<a href='supprime.php'> Cliquez ici pour supprimer la session </a>" ;
+    $_SESSION['nom'] = $nom ;
+}
+else {
+    echo "bonjour gentil inconnu <BR>" ;
+}
+----
+
+.Fichier supprime.php
+[source,php]
+----
+<?php
+session_start();
+session_destroy();
+
+header('Location: session.php');
+----
+[start=2]
+. **Démarrage :** Démarrez Laragon.
+
+. **Tests Navigateur :** À l’aide de votre navigateur, testez la route suivante :
++
+[source,http]
+----
+http://localhost/challenge/session.php
+----
++
+Puis la route suivante, paramétrée :
++
+[source,http]
+----
+http://localhost/challenge/session.php?nom=Django
+----
++
+Puis, de nouveau la route suivante, sans paramètre :
++
+[source,http]
+----
+http://localhost/challenge/session.php
+----
+
+[NOTE]
+====
+Normalement le serveur s’est rappelé de votre dernière requête.
+====
+
+=== Ce qui est attendu
+Votre challenge consiste à **reproduire ce scénario, mais en ligne de commande, avec cURL**.
+
+Un rapport détaillé est attendu !
+
+=== Ressources & Aide
+
+* Pour des rappels sur HTTP, les verbes et Curl, consultez le site de référence : https://ldv-melun.github.io/sio-slam/sio-component/index-spring-boot.html
+* Il y a également des informations intéressantes sur la notion de **Session** pour ce challenge.
+
+=== Annexes : Installation de Curl
+
+**Outil en ligne de commande - Curl**
+- Copier le répertoire curl dans le répertoire `c:\Program Files` (Programmes
++
+Pour se faire:
+
++
+. Ensuite vous pouvez ajouter le répertoire `bin` à la variable d’environnement `PATH`.
++
+Exemple de chemin à ajouter :
+`C:\Program Files\curl\bin`
+
+.Configuration de la variable PATH sous Windows
+image::02-challenge-1.png[Fenêtre Variables d'environnement : Ajout du chemin Curl]
+
+.Configuration de la variable PATH sous Windows étape 2
+image::02-challenge-2.png[Fenêtre Variables d'environnement : Ajout du chemin Curl]
+
+.Configuration de la variable PATH sous Windows étape 3
+image::02-challenge-3.png[Fenêtre Variables d'environnement : Ajout du chemin Curl]
+
+**Scénario à reproduire avec cURL :**
+
+1.  Appeler la page (Le serveur doit vous dire "Bonjour gentil inconnu").
+2.  Appeler la page en donnant un nom (Le serveur enregistre le nom en session).
+3.  Rappeler la page sans paramètre (Le serveur doit vous reconnaître !).
+
+**Indice pour les étudiants, si vous ne trouvez pas :**
+
+Utilisez les options `-c cookies.txt` (pour enregistrer le cookie envoyé par le serveur) et `-b cookies.txt` (pour renvoyer le cookie au serveur).

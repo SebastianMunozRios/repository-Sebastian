@@ -1,0 +1,112 @@
+= Séance 8 : La mécanique du CSRF (Cross-Site Request Forgery)
+:toc: left
+:toc-title: Sommaire
+:icons: font
+:source-highlighter: rouge
+:imagesdir: ./images
+
+Ce chapitre est une étape théorique et offensive cruciale avant d'aborder la sécurisation du code (étude de cas de développement) lors de la prochaine séance. L'objectif est de comprendre comment un attaquant peut forcer un utilisateur authentifié à exécuter des actions à son insu.
+
+
+== Cadrage Théorique : XSS vs CSRF
+
+Il est essentiel de ne pas confondre ces deux vulnérabilités qui ciblent toutes deux la session de l'utilisateur. La différence fondamentale réside dans le **sens de la confiance**.
+
+=== Cross-Site Scripting (XSS)
+* **La faille :** Le navigateur de la victime fait aveuglément confiance au serveur vulnérable.
+* **Le mécanisme :** Le serveur renvoie un script malveillant (injecté par l'attaquant). Le navigateur l'exécute car il croit qu'il fait partie légitime de la page web. Le script peut alors lire les cookies et les exfiltrer.
+
+=== Cross-Site Request Forgery (CSRF)
+* **La faille :** Le serveur vulnérable fait aveuglément confiance au navigateur de la victime.
+* **Le mécanisme :** L'attaquant attire la victime (déjà connectée au site cible) sur une page web malveillante qu'il contrôle. Cette page contient un code (comme un formulaire caché) qui force le navigateur de la victime à envoyer une requête HTTP vers le site cible.
+* **Le danger :** Le navigateur joint automatiquement le cookie de session de la victime à cette requête. Le serveur cible reçoit la requête, voit un cookie valide, et exécute l'action (changement de mot de passe, virement bancaire, etc.) en pensant que la victime en est à l'origine.
+
+
+[NOTE]
+.Comprendre l'environnement : L'Exploit Server
+====
+Dans les scénarios d'attaques "Cross-Site" (comme le CSRF), l'attaquant doit posséder son propre site web pour y héberger son piège (le formulaire caché) et y attirer la victime.
+
+Pour vous éviter de devoir configurer un serveur web public externe pour chaque laboratoire, PortSwigger vous fournit un **Exploit Server**.
+Accessible via un bouton en haut de l'interface des laboratoires, il simule votre domaine d'attaquant.
+
+**Comment l'utiliser ?**
+L'interface de l'Exploit Server est très simple et se compose de 3 zones principales :
+
+* **File path :** L'URL de votre page piégée (par défaut `/exploit`).
+* **Body :** La zone de texte où vous allez coller votre code HTML/JavaScript malveillant (le payload).
+* **Les boutons d'action :**
+** `Store` : Sauvegarde votre code sur le serveur.
+** `View exploit` : Vous permet de visualiser votre propre page piégée pour tester si elle s'affiche ou s'exécute correctement.
+** `Deliver exploit to victim` : Simule l'envoi du lien à la victime (un robot automatisé). Le robot va visiter votre Exploit Server, déclencher votre code, et subir l'attaque. C'est ce bouton qui permet de valider le laboratoire !
+====
+
+== Travaux Pratiques (Laboratoires PortSwigger & Mutillidae)
+
+[NOTE]
+.Prérequis et Outils
+====
+* Pour ces laboratoires, vous utiliserez l'**Exploit Server** fourni par PortSwigger pour héberger vos pages web malveillantes.
+* Assurez-vous d'être connecté au laboratoire avec les identifiants fournis (généralement `wiener:peter`).
+====
+
+=== Lab 1 : Vulnérabilité CSRF sans aucune protection
+* **Lien :** https://portswigger.net/web-security/csrf/lab-no-defenses
+* **Objectif :** Créer une page HTML malveillante qui, lorsqu'elle est visitée par la victime, modifie automatiquement son adresse email sur le site.
+* **Indications :**
+1. Connectez-vous à votre compte et observez la requête POST générée lors du changement de votre adresse email (interceptez-la avec Burp Suite).
+2. Rendez-vous sur votre **Exploit Server**.
+3. Rédigez un formulaire HTML (`<form>`) dont les champs cachés (`<input type="hidden">`) reprennent exactement les paramètres de la requête interceptée.
+4. Ajoutez un script JavaScript pour que le formulaire se soumette tout seul au chargement de la page : `<script>document.forms[0].submit();</script>`.
+
+
+=== Lab 2 : Contournement d'un jeton CSRF mal implémenté
+* **Lien :** https://portswigger.net/web-security/csrf/bypassing-token-validation/lab-token-not-tied-to-user-session
+* **Objectif :** Modifier l'email de la victime malgré la présence d'un mécanisme de protection (Jeton CSRF).
+* **Le contexte :** Le développeur a mis en place un jeton de sécurité (`csrf_token`). Cependant, le serveur vérifie uniquement si le jeton est *valide en général*, mais ne vérifie pas s'il *appartient bien à l'utilisateur qui fait la requête*.
+* **Indications :**
+1. PortSwigger vous fournit exceptionnellement deux comptes (`wiener` et `carlos`).
+2. Connectez-vous avec votre compte d'attaquant (`wiener`), initiez un changement d'email, interceptez la requête et **copiez la valeur de votre propre jeton CSRF**. Abandonnez (Drop) la requête.
+3. Créez votre page malveillante sur l'Exploit Server, comme dans le Lab 1, mais en insérant **votre** jeton valide dans le champ caché prévu à cet effet.
+4. Livrez l'exploit à la victime (qui utilisera involontairement votre jeton pour valider son changement d'email !).
+
+
+=== Lab 3 : Exploitation CSRF sur une application PHP (Mutillidae)
+* **Environnement :** Serveur Mutillidae local (Niveau de sécurité : 0).
+* **Objectif :** Héberger une page malveillante sur votre machine d'attaquant qui forcera un utilisateur authentifié de Mutillidae à publier un article de blog à son insu.
+* **Le contexte :** Ce laboratoire vous met dans les conditions réelles d'une application PHP vulnérable, très proche de ce que vous devrez sécuriser lors de la prochaine séance.
+
+**Indications :**
+
+1. Sur Mutillidae, connectez-vous avec un compte existant.
+2. Allez sur la page `OWASP 2017 => A8 : Cross Site Scripting (CSRF) => Add to your blog`.
+3. Saisissez un message de test, interceptez la requête POST avec Burp Suite et analysez les paramètres envoyés (notamment `csrf-token` qui, au niveau 0, est soit absent, soit non vérifié, ainsi que les champs `blog_entry` et `add-to-your-blog-php-submit-button`).
+4. Sur votre machine d'attaquant, créez un fichier `exploit-csrf.html` contenant un formulaire caché pointant vers l'URL d'ajout de blog de Mutillidae.
+5. Ajoutez un script d'auto-soumission (comme vu dans le Lab 1).
+6. Ouvrez ce fichier HTML localement dans votre navigateur (tout en ayant votre session Mutillidae active dans un autre onglet).
+7. Retournez sur la page du blog de Mutillidae : votre message malveillant a été publié sous votre nom !
+
+== Les mécanismes de défense (Préparation au développement)
+
+Pour l'étude de cas de la prochaine séance, vous devrez corriger un code PHP vulnérable. Voici les deux concepts d'architecture défensive que vous devrez maîtriser.
+
+=== Les Jetons Anti-CSRF (Synchronizer Token Pattern)
+C'est la défense historique et la plus robuste.
+
+1. **Génération :** À l'ouverture de la session, le serveur génère une chaîne de caractères aléatoire, longue et imprévisible (le jeton). Il la stocke côté serveur (dans la variable de session `$_SESSION` en PHP).
+2. **Transmission :** Chaque formulaire sensible de l'application intègre ce jeton dans un champ caché.
+3. **Validation :** Lors de la soumission du formulaire (POST), le serveur compare le jeton reçu avec celui stocké en session. S'ils diffèrent ou si le jeton est absent, la requête est rejetée.
+
+=== L'attribut de cookie `SameSite`
+C'est une défense moderne gérée directement par le navigateur.
+L'attribut `SameSite` indique au navigateur s'il a le droit d'envoyer le cookie de session lors d'une requête "Cross-Site" (qui provient d'un autre nom de domaine).
+
+* **SameSite=None :** Le cookie est envoyé à chaque fois. L'application est vulnérable au CSRF.
+* **SameSite=Lax :** (Défaut moderne) Le cookie n'est envoyé lors d'une requête Cross-Site que s'il s'agit d'une navigation "Top-Level" (comme cliquer sur un lien standard, méthode GET). Les soumissions de formulaires POST depuis un autre site sont bloquées.
+* **SameSite=Strict :** Le cookie n'est *jamais* envoyé depuis un autre domaine. Très sécurisé, mais peut altérer l'expérience utilisateur si l'application dépend de liens externes.
+
+== Questions de Synthèse
+
+1. **Architecture :** Expliquez avec vos propres mots pourquoi l'attaque CSRF du Lab 1 ne fonctionnerait pas si la victime s'était déconnectée du site cible juste avant de visiter la page malveillante de l'attaquant ?
+2. **Logique applicative :** Dans le Lab 2, quelle est la faille de logique algorithmique (côté serveur) qui a permis au jeton de l'attaquant d'être accepté pour valider l'action de la victime ? Comment le développeur aurait-il dû coder sa vérification ?
+3. **Analyse Mutillidae (Lab 3) :** Lors de ce dernier laboratoire, vous avez hébergé votre page `exploit-csrf.html` localement (ou sur un serveur tiers) et non sur le serveur Mutillidae lui-même. Expliquez pourquoi le navigateur a tout de même accepté d'envoyer le cookie de session PHP (`PHPSESSID`) de l'utilisateur à Mutillidae lors de la soumission automatique du formulaire ?

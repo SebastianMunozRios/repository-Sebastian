@@ -1,0 +1,106 @@
+= Compte rendu — TP5
+Marie-Dominique Dzalamou
+v1.0, 2026-02-05
+:toc:
+:toc-title: Sommaire
+:sectnums:
+:icons: font
+:imagesdir: img
+
+==  Test du niveau 1 de sécurité :
+
+=== Question 1
+
+**Question 1 :**
+Est-ce que le niveau de sécurité 1 permet d’éviter l’attaque avec Burpsuite ?
+
+**Réponse :**
+Le niveau de sécurité 1 permet de d'éviter l'attaque si elle n'est pas encodée.
+
+=== Question 2
+
+**Question :**
+Est-il possible d’écrire le code malicieux directement dans le formulaire ?
+
+**Réponse :**
+Non, il n'est plus possible d'écrire le code malicieux directement dans le formulaire.
+
+image:2.png[]
+
+=== Question 3
+
+**Question :**
+En observant le code de la page dns-lookup.php, repérer les sécurités activées à ce niveau.
+
+**Réponse :**
+Les sécurités activés à ce niveau sont "$lEnableJavaScriptValidation" et "$lEnableHTMLControls", ces variables sont passé à **true** lors du passage au niveau 1.
+
+image::code-sécu.png[]
+
+
+=== Question 4
+
+**Question :**
+Quels sont les caractères typiques utilisés lors d’une attaque XSS ?
+
+**Réponse :**
+
+Comme caractère typique il y a :
+
+* les cheverons (< >) pour fermer les balises html, dont **<scrip>**
+* la barre oblique (/) pour fermer une balise
+* les guillemets (' ou ") pour mettre le reste d'une requête en commentaire
+* le point virgule (;) pour fermer une instruction javascript
+
+
+
+image::4.png[]
+
+==  Test du niveau 5 de sécurité :
+
+=== Question 5
+
+**Question :**
+Est-ce que le niveau de sécurité 5 permet d’éviter l’attaque avec BurpSuite ?
+
+
+**Réponse :**
+
+Oui le niveau de sécurité 5 permet d'éviter l'attaque avec BurpSuite.
+
+
+=== Question 6
+
+**Question :**
+En observant le fichier dns-lookup.php, repérer les variables spécifiques associées à ce niveau de protection.
+
+
+
+**Réponse :**
+
+Les variables associées à ce niveau de protection sont
+
+* $lEnableJavaScriptValidation
+* $lProtectAgainstMethodTampering
+* $lProtectAgainstXSS
+
+=== Question 7
+
+**Question :**
+Expliquer le rôle de l’instruction suivante dans le fichier dns-lookup.php (ligne n° 44) :
+
+
+**Réponse :**
+
+Le rôle de l'instruction est de
+
+
+=== Question 8
+
+**Question :**
+Que vérifie la protection contre les injections de commandes ?
+
+
+**Réponse :**
+
+Elle vérifie les adresses IP (en IPV4 et IPV6) ainsi que les noms de domaine

@@ -1,0 +1,75 @@
+= TP6 compte rendu : Mylan Patisson
+:toc: left
+:icons: font
+:source-highlighter: rouge
+:imagesdir: imgmpatisson
+
+== 2.1. Lab 1 : Le Classique (Reflected XSS)
+image::labo1.png[Capture Lab 1]
+
+== 2.2. Lab 2 : Le Piège à retardement (Stored XSS)
+image::labo2.png[Capture Lab 2]
+
+=== 3.1. Q1. Différence Stored vs Reflected
+
+*Réponse de Mylan Patisson :*
+_La différence majeur en terme de dangerosité est que le Stored Xss stocke le code malveillant en base de données ce qui la fait durer dans le temps. Alors que pour le Reflected l'attaquant passe par un lien pour que le code s'exécute instantanément._
+_Pour ne pas éveiller les soupçons la méthode la plus efficace est le stored XSS car c'est la plus dangereuse des deux qui est ENREGISTRER dans le serveur et l'admin pourrait meme être pieger car à la visite du site il sera infecter._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Très bien.** Tu as bien saisi la notion de "persistance" (durée dans le temps) qui rend le Stored XSS si redoutable pour piéger un administrateur à son insu.#
+
+== 2.3. Lab 3 : Sortir de la case (XSS dans un attribut)
+image::labo3.png[Capture Lab 3]
+
+=== 3.2. Q2. Le contexte d’attribut (Lab 3)
+
+*Réponse de Mylan Patisson :*
+_L'injection classique ne fonctionne pas car l'injection est attraper par le navigateur en utilisant "< , >" ce qui en HTML créer une nouvelle balise et qui donc désactive le script. Elle est  passé en simple texte, plus considérer comme la balise "primaire" de la ligne._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Attention à la formulation, il y a une petite confusion technique.** Ce n'est pas le navigateur qui "attrape" ou "crée une nouvelle balise". C'est le **serveur** (ou le framework) qui a sécurisé l'affichage en transformant tes `<` et `>` en entités HTML (ex: `&lt;`). Conséquence : quand le navigateur reçoit le code, il voit ces entités et décide de les afficher comme du "simple texte" au lieu de les interpréter comme du code.
+Sinon attrapée: pour savoir si un verbe est à l'infinitif ou pas, on remplace par un verbe du 27me ou 3ème groupe, par exemple vendre.#
+
+
+== 2.4. Lab 4 : Casser le JavaScript (XSS dans un script)
+image::labo4.png[Capture Lab 4]
+image::labo4bis.png[Capture Lab 4 bis]
+
+=== 3.3. Q3. Syntaxe JavaScript (Lab 4)
+
+*Réponse de Mylan Patisson :*
+_' sert à fermer les chaînes de caractères , (;) sert à fermer l'instruction de la ligne car dans la plupart des Langages de Programmation elle est utiliser à la fin de l'instruction et (//) sert à mettre le reste en commentaire._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Parfait.** Ton explication est concise et totalement exacte.#
+
+== 2.5. Lab 5 : Le DOM XSS (Client-Side)
+image::labo5.png[Capture Lab 5]
+
+=== 3.4. Q4. DOM XSS (Lab 5)
+
+*Réponse de Mylan Patisson :*
+_Car une faille DOM XSS s'éxécute dans le navigateur WEB directement contrairement à une faille Reeflected XSS qui elle s'éxécute sur le serveur donc à l'endroit où est situer le WAF._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Erreur de concept importante ici !**
+**Aucun** code JavaScript malveillant lié au XSS ne s'exécute sur le serveur (sinon on parlerait de RCE - Remote Code Execution).#
+
+[green]#Que ce soit Reflected, Stored ou DOM, le script s'exécute **toujours** dans le navigateur (côté client).#
+
+[green]#La vraie différence pour le WAF, c'est le **trajet** de la donnée :#
+
+[green]#**Reflected :** Le payload fait l'aller-retour. Il part de l'URL, passe par le serveur (et donc le WAF le voit), puis redescend dans la page HTML.#
+
+[green]#**DOM XSS :** Le payload est souvent placé dans le fragment de l'URL (après le `#`.#
+[green]#Cette partie n'est **jamais** envoyée au serveur HTTP. Le WAF est aveugle.#
+
+
+=== 3.5. Q5. Remédiation
+
+*Réponse de Mylan Patisson :*
+_Encoder (échapper) toutes les données affichées à l’écran (ex: < devient <)._
+
+[green]#**Correction / Commentaire :**#
+[green]#C'est la bonne réponse, mais il manque la justification demandée dans l'énoncé. (Note : ton `<` devient `\&lt;` est sans doute un bug d'affichage de l'éditeur ASCIIDOC, en réalité c'est `<` devient ampersandltpointvirgule `\&lt;`). Pense à argumenter tes choix lors des futures études de cas !#

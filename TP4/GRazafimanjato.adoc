@@ -1,0 +1,84 @@
+= Compte rendu TP : Gédéon RAZAFIMANJATO
+:toc: left
+:icons: font
+:source-highlighter: rouge
+:imagesdir: imggra
+
+== Challenges
+
+=== Challenge 1
+Pour le challenge 1, je n'ai pas pris de capture d'écran, mais J'ai pris une photo avec mon portable.
+
+image::Attack.jpg[Capture du Challenge 1]
+
+=== Challenge 2
+image::Attack.png[Capture du Challenge 2]
+
+=== [green]#Challenge 3 (Manquant)#
+[green]#Il manque la preuve de réussite pour le laboratoire 3 (Analyse de session).#
+
+---
+
+== Compte-rendu des Questions
+
+=== Q1 : Pourquoi la gestion par cookie est-elle dangereuse ?
+
+*Réponse de Gédéon RAZAFIMANJATO :*
+_C'est dangereux car le cookie est stocké **côté client**, ce qui permet à l'utilisateur de le modifier facilement (grâce à *Burp Suite* ou via la touche *F12*). En changeant une valeur `false` en `true`, il peut usurper l'identité d'un administrateur et accéder à des fonctions réservées sans autorisation._
+
+image::q1_burp_cookie.png[Capture modification du cookie]
+
+[green]#**Correction / Commentaire :**#
+[green]#Réponse correcte et précise. Le problème de fond est bien la confiance accordée au stockage client.#
+
+=== Q2 : Quelle est la bonne méthode côté serveur ?
+
+*Réponse de Gédéon RAZAFIMANJATO :*
+_On récupère le rang en base de données lors de la connexion, puis on le stocke dans une variable `$_SESSION`. Il suffit ensuite de placer une condition « if » au début de chaque page sensible pour bloquer l'accès si l'utilisateur n'est pas admin._
+
+image::q2_code_php.png[Exemple de structure de vérification PHP]
+
+[green]#**Correction / Commentaire :**#
+[green]#Très bien. C'est le mécanisme standard des sessions sécurisées.#
+
+=== Q3 : Quel élément technique permet de distinguer le bon login dans Burp ?
+
+*Réponse de Gédéon RAZAFIMANJATO :*
+_C'est la taille de la réponse (**Length**). Toutes les mauvaises tentatives renvoient une page d'erreur identique avec le même nombre d'octets. Dès que le login est correct, la réponse change (par ex : un message de succès), ce qui crée une longueur différente dans le tableau de Burp Suite._
+
+image::q3_burp_success.png[Différence de longueur dans Burp Suite]
+
+[green]#**Correction / Commentaire :**#
+[green]#Exact. La variation de la longueur (Length) est l'indice le plus fiable.#
+
+=== Q4 : Quelle "Bonne Pratique" de développement permettrait d’empêcher cette attaque ?
+
+*Réponse de Gédéon RAZAFIMANJATO :*
+_Analyse complémentaire (Image fournie sans texte)_
+
+image::q4_analyse.png[Capture analyse complémentaire]
+
+[green]#**Correction / Commentaire :**#
+[green]#Il manque l'explication textuelle. Pour empêcher l'énumération, il faut utiliser des **messages d'erreur génériques** (ex: "Identifiant ou mot de passe incorrect") afin que la réponse serveur soit toujours identique.#
+
+=== [green]#Q5. Quelle était la structure exacte du cookie décodé ?#
+
+[green]#**Correction (Non répondu) :**#
+[green]#La structure du cookie décodé (Base64) était : `username:MD5(password)`.#
+
+=== [green]#Q6. Pourquoi l'utilisation de MD5 est-elle une faiblesse critique ?#
+
+[green]#**Correction (Non répondu) :**#
+[green]#MD5 est un algorithme de hachage obsolète car trop rapide. Il est vulnérable aux attaques par force brute (GPU) et aux tables pré-calculées (Rainbow Tables).#
+
+=== [green]#Q7. L'attaque aurait-elle fonctionné avec un "Salt" (Grain de sel) ?#
+
+[green]#**Correction (Non répondu) :**#
+[green]#Non. Le sel est une donnée aléatoire ajoutée au mot de passe avant le hachage. Sans connaître le sel (stocké sur le serveur), l'attaquant ne peut pas prédire le hash final pour forger le cookie.#
+
+---
+
+== Annexes techniques
+image::schema_attaque.png[Schéma ou capture additionnelle]
+
+image::conclusion_visuelle.png[Capture finale du résultat]

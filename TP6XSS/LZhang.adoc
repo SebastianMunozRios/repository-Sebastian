@@ -1,0 +1,92 @@
+= Compte rendu de TP : Cybersécurité (Luc ZHANG)
+:author: ZHANG Luc
+:toc: left
+:imagesdir: imglzhang
+:icons: font
+:source-highlighter: rouge
+
+== Challenges
+
+=== Challenge 1
+*Commentaire de l'étudiant :*
+_Pour résoudre ce lab, j'ai intercepté la requête avec Burp Suite et modifié le paramètre de catégorie en ' OR 1=1-- afin de rendre la condition toujours vraie et de mettre en commentaire la restriction de publication, forçant ainsi l'affichage de tous les produits, même ceux cachés._
+
+image::capture1.png[Challenge numéro 1]
+
+[green]#**Correction / Commentaire :**#
+[green]#**Attention Luc !** Tu as fait un copier-coller de ton compte-rendu du TP précédent (Injection SQL) pour le texte de ce challenge. Prends garde à bien relire tes documents avant de les rendre, ce genre d'étourderie pourrait te pénaliser lors des examens.#
+
+=== Challenge 2
+image::capture2.png[Challenge numéro 2]
+
+=== Challenge 3
+image::capture3.png[Challenge numéro 3]
+
+=== Challenge 4
+image::capture4.png[Challenge numéro 4]
+
+=== Challenge 5
+image::capture5.png[Challenge numéro 5]
+
+---
+
+== Réponses aux questions :
+
+=== Q1 : Quelle est la différence majeure entre le Lab 1 (Reflected) et le Lab 2 (Stored) en termes de dangerosité ? Si vous vouliez piéger un administrateur, quelle méthode serait la plus efficace pour ne pas éveiller les soupçons ?
+
+*Réponse de Luc ZHANG :*
+_Reflected : Le script malveillant n'est pas enregistré sur le serveur. Il est "réfléchi" instantanément (par exemple via un lien piégé dans un mail). Si la victime ne clique pas sur le lien précis, il ne se passe rien._
+
+_Stored : Le script est enregistré définitivement dans la base de données du site (ex: un commentaire, un profil). Chaque utilisateur qui consulte la page devient une victime._
+
+=== Q2 :  Dans le Lab 3, pourquoi l’injection classique <script>alert(1)</script> ne fonctionne-t-elle pas ? Expliquez techniquement ce que fait le navigateur avec les caractères < et >._
+_Pour piéger un administrateur, la méthode Stored est la plus efficace et la moins suspecte._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Sur le fond, c'est exact.** La distinction de persistance est parfaitement expliquée. Attention cependant à ta mise en page AsciiDoc : tu avais fusionné la conclusion de ta réponse 1 avec le titre de la question 2 !#
+
+
+
+=== Q2 : Dans le Lab 3, pourquoi l’injection classique <script>alert(1)</script> ne fonctionne-t-elle pas ? Expliquez techniquement ce que fait le navigateur avec les caractères < et >.
+
+*Réponse de Luc ZHANG :*
+_L'injection échoue car le site utilise l'encodage HTML (ou échappement)._
+_Techniquement, le navigateur ne voit plus les caractères < et > comme des balises de code à exécuter, mais comme du simple texte à afficher_
+
+[green]#**Correction / Commentaire :**#
+[green]#**C'est globalement compris.** Précision importante pour être tout à fait rigoureux : c'est le **serveur** (le site) qui encode les chevrons en entités `\&lt;` et `\&gt;`. Quand le navigateur reçoit la page, il lit ces entités inoffensives et les affiche effectivement comme du texte brut au lieu de créer une balise.#
+
+
+
+=== Q3 : Dans le Lab 4, votre payload ressemble à '; alert(1); //. Expliquez précisément le rôle de chaque partie de cette chaîne : * ' : Sert à …​* ; : Sert à …​* // : Sert à …​
+
+*Réponse de Luc ZHANG :*
+
+_" ' "  : Sert à fermer la chaîne de caractères (le texte) dans laquelle notre injection est coincée._
+
+_" ; " : Sert à terminer l'instruction précédente pour pouvoir en commencer une nouvelle (notre alert)._
+
+_" // " :  Sert à mettre le reste du code d'origine en commentaire. Cela évite que les caractères qui suivaient l'injection ne provoquent une erreur de syntaxe qui bloquerait l'exécution de notre script._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Parfait.** C'est exactement l'explication technique attendue pour l'évasion d'un contexte JavaScript (String Breakout).#
+
+
+
+=== Q4 : Pourquoi un pare-feu applicatif (WAF) situé sur le serveur a-t-il plus de mal à détecter une faille DOM XSS par rapport à une faille Reflected XSS classique ? (Indice : Où s’exécute le code vulnérable ?)
+
+*Réponse de Luc ZHANG :*
+_Un WAF surveille ce qui arrive au serveur. Or, dans une faille DOM XSS, le code malveillant est traité directement par le navigateur de l'utilisateur (le côté client) via du JavaScript, sans forcément que le "payload" ne soit envoyé au serveur ou analysé par lui._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Très bien.** Le concept de traitement "Client-Side" échappant totalement à la vigilance du serveur est parfaitement assimilé.#
+
+
+
+=== Q5 : Si vous étiez développeur, quelle est la règle d’or pour empêcher les failles XSS ?
+
+*Réponse de Luc ZHANG :*
+_Encoder (échapper) toutes les données affichées à l’écran (ex: < devient <). Car cela transforme les caractères spéciaux en texte inoffensif, empêchant ainsi le navigateur d'exécuter accidentellement du code malveillant._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Excellente conclusion.** (Note pour ton document : l'affichage a transformé ta réponse, en réalité `<` devient `\&lt;`). C'est la seule méthode de défense robuste (Output Encoding).#

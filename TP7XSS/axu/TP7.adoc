@@ -1,0 +1,97 @@
+= Compte-Rendu : TP7 Sécurité Web & XSS
+:icons: font
+:toc: left
+:toc-title: Sommaire
+:imagesdir: ./images
+
+== 🛡️ Premier défi : XSS réfléchi via un contexte HTML
+
+=== Analyse de la sécurité au Niveau 1
+
+* **Efficacité contre BurpSuite :** Non. Le niveau 1 ajoute généralement des protections côté client (JavaScript) ou des filtres basiques.
+* **Contournement :** Avec BurpSuite, on intercepte la requête après ces vérifications. On peut donc injecter le code malveillant directement dans la requête HTTP, contournant ainsi la sécurité du navigateur.
+* **Saisie directe dans le formulaire :** Impossible, car le code active `$lEnableJavaScriptValidation` et `$lEnableHTMLControls`. Le navigateur bloquera la saisie si elle contient des caractères comme `<` ou `>` ou si le texte dépasse 20 caractères.
+
+[cols="1,2", options="header"]
+|===
+| Variable | Rôle au Niveau 1
+| `$lEnableJavaScriptValidation = true` | Active un script qui surveille la saisie.
+| `$lEnableHTMLControls = true` | Ajoute des limites comme `maxlength="20"` dans la balise HTML.
+|===
+
+* **Caractères d'attaque typiques :** D'après le script de validation à la ligne 87, ce sont : `< > = ( )`.
+
+---
+
+=== Analyse de la sécurité au Niveau 5
+
+* **Efficacité contre BurpSuite :** Oui.
+* **Raison :** La sécurité est maintenant "côté serveur". Le serveur vérifie et nettoie les données lui-même, peu importe l'outil utilisé pour envoyer la requête.
+
+==== Protections spécifiques activées (case "5") :
+* `$lProtectAgainstCommandInjection = true;`
+* `$lProtectAgainstXSS = true;`
+
+[IMPORTANT]
+.Rôle de `$lProtectAgainstMethodTampering` (Ligne 44)
+Cette instruction force l'application à utiliser uniquement la méthode **POST**. Cela empêche un attaquant de passer des paramètres malveillants via l'URL (GET).
+
+* **Protection contre les injections de commandes :** Elle utilise une Regex (ligne 59) pour vérifier que l'entrée ressemble strictement à une adresse IP (IPv4/v6) ou à un nom de domaine valide. Tout le reste est rejeté.
+* **Fonction anti-XSS spécifique :** L'encodeur `$Encoder->encodeForHTML($lTargetHost);` (ligne 66). Il transforme les caractères spéciaux en texte inoffensif.
+
+==== Résumé des protections du niveau n°5 :
+. **Validation stricte :** Seuls les formats IP/Domaine sont acceptés (Regex).
+. **Encodage :** Les balises HTML sont neutralisées pour empêcher le XSS.
+. **Fonction sécurisée :** Utilisation de `dns_get_record()` au lieu de `shell_exec()`.
+
+---
+
+image::defi1.png[Capture d'écran du 1er Defi, align="center"]
+
+== 💾 Deuxième défi : XSS permanent via une page affichant des logs
+
+* **Réussite au niveau 5 :** Non. Contrairement au niveau 0, le code malveillant injecté ne s'exécute pas dans le navigateur de la victime. Il s'affiche simplement comme du texte inoffensif.
+
+[NOTE]
+====
+**Pourquoi la validation en entrée (input validation) n'est pas suffisante ?**
+Parce qu'on ne peut pas toujours tout bloquer à l'entrée (certains caractères spéciaux sont parfois nécessaires). Surtout, une donnée peut être saine pour une base de données mais devenir dangereuse au moment où elle est affichée dans une page HTML. La sécurité doit donc aussi se faire à la sortie (affichage).
+====
+
+=== Étude du code de show-log.php (Niveau 5)
+
+* **`$lProtectAgainstXSS = true` :** Active l'encodage des caractères spéciaux avant l'affichage.
+* **Encodage de sortie (Output Encoding) :** C'est la protection la plus forte. Elle transforme les `<script>` en `&lt;script&gt;`. Le navigateur lit cela comme du texte et non comme un ordre d'exécution.
+* **Utilisation de requêtes préparées :** Cela protège la base de données (SQLi) pendant que le log est enregistré.
+
+---
+
+== 🛠️ Exemples d'encodage par langage
+
+Chaque langage possède ses propres outils pour neutraliser le HTML :
+
+[cols="1,2", options="header"]
+|===
+| Langage / Framework | Méthode de protection
+| **PHP** | `htmlspecialchars()` ou `htmlentities()`
+| **JavaScript** | Utiliser `.textContent` au lieu de `.innerHTML`
+| **Python (Flask)** | L'auto-échappement Jinja2 est activé par défaut
+| **Java (Spring)** | Utilisation de la bibliothèque OWASP Java Encoder
+|===
+
+---
+
+== 💡 Conclusion sur les bonnes pratiques contre le XSS
+
+1. **Ne jamais faire confiance à l'utilisateur :** Tout ce qui vient de l'extérieur est potentiellement dangereux.
+2. **Encoder à la sortie (Règle d'or) :** Toujours transformer les caractères spéciaux en entités HTML juste avant de les afficher dans le navigateur.
+3. **Utiliser le "Content Security Policy" (CSP) :** Une règle de sécurité envoyée par le serveur qui dit au navigateur : "N'autorise aucun script provenant d'un autre site".
+4. **Valider en entrée :** Vérifier que les données respectent le format attendu (ex: une date doit être une date).
+
+== 🚩 Défi Supplémentaire : XSS Stocké via le pseudo-protocole JavaScript
+
+**Challenge PortSwigger :** _Stored XSS into anchor `href` attribute with double quotes HTML-encoded._
+
+Ce lab contient une vulnérabilité XSS stocké dans la fonctionnalité de commentaire. Pour le résoudre, il faut soumettre un commentaire qui appelle la fonction `alert()` lorsque le nom de l'auteur du commentaire est cliqué.
+
+image::labo1.png[Capture d'écran du lab PortSwigger, align="center"]

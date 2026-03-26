@@ -1,0 +1,93 @@
+= Compte Rendu : Atelier Sessions PortSwigger
+:author: Wardi Romani Philopatir
+:email: philowardiromani@gmail.com
+:revdate: {docdate}
+:toc: left
+:toc-title: Sommaire
+:sectnums:
+:imagesdir: images
+:icons: font
+
+Compte rendu de Philopatir Wardi Romani SIO 1
+
+== Sur le Lab 1 (Cookies)
+
+=== Screenshot de réussite du lab 1 !
+image::Lab1-screen.png[Preuve Lab 1]
+
+=== Q1. Pourquoi est-il dangereux de stocker un paramètre comme Admin=false directement dans un cookie ?
+
+*Réponse de Philopatir Wardi Romani :*
+
+_C'est dangereux car le cookie est stocké **côté client** (dans le navigateur de l'utilisateur). L'utilisateur a un contrôle total sur ce qui se passe sur sa machine : il peut voir le contenu des cookies et surtout les modifier via les outils de développement (F12) ou des extensions. Si le serveur fait "confiance" à ce cookie sans revérification, n'importe qui peut changer false en true et obtenir des droits administrateurs._
+
+[green]#**Correction / Commentaire :**#
+[green]#Excellente réponse. Vous avez bien identifié le problème fondamental : le "Client-Side Trust". On ne doit jamais faire confiance aux données qui reviennent du client sans les vérifier.#
+
+=== Q2. Quelle aurait été la bonne méthode pour gérer les droits administrateur côté serveur ?
+
+*Réponse de Philopatir Wardi Romani :*
+_La bonne méthode est de ne jamais stocker les droits directement dans le cookie._
+
+_1.  Le serveur doit stocker le rôle de l'utilisateur (Admin ou User) dans une **base de données** sécurisée côté serveur._
+
+_2.  Le cookie ne doit contenir qu'un **identifiant de session** (Session ID) aléatoire et difficile à deviner._
+
+_3.  À chaque requête, le serveur prend cet ID, interroge la base de données pour savoir qui est cet utilisateur et quels sont ses droits ?._
+
+[green]#**Correction / Commentaire :**#
+[green]#Parfait. C'est exactement le mécanisme standard des sessions sécurisées (Session ID -> Base de données -> Rôle).#
+
+== Sur le Lab 2 (Énumération)
+
+=== Screenshot de réussite du lab 2 !
+image::Lab2-screen.png[Preuve Lab 2]
+
+=== Q3. Dans l’attaque Intruder, quel élément technique précis vous a permis de distinguer le bon login des mauvais ?
+
+*Réponse de Philopatir Wardi Romani :*
+_L'élément qui a permis de distinguer le bon login était la **taille de la réponse** (colonne Length dans Burp Intruder). Toutes les tentatives avec de mauvais utilisateurs renvoyaient une page avec un message d'erreur spécifique. Lorsque le bon utilisateur a été trouvé, le message d'erreur a changé, ce qui a modifié légèrement la taille de la page HTML renvoyée (nombre d'octets différent)._
+
+[green]#**Correction / Commentaire :**#
+[green]#Très bien. L'analyse de la taille (Length) est souvent plus rapide et fiable que de lire le contenu textuel de chaque réponse dans l'Intruder.#
+
+=== Q4. Quelle "Bonne Pratique" de développement permettrait d’empêcher cette attaque ?
+
+*Réponse de Philopatir Wardi Romani :*
+_Pour empêcher l'énumération d'utilisateurs, il faut utiliser des messages d'erreur **génériques**. Au lieu de dire "Utilisateur incorrect" ou "Mot de passe incorrect", l'application doit toujours répondre par une phrase identique, comme : « Identifiant ou mot de passe incorrect. » De cette façon, la réponse du serveur sera exactement la même que l'utilisateur existe ou non, empêchant un attaquant de trier les résultats._
+
+[green]#**Correction / Commentaire :**#
+[green]#C'est exact. Les messages génériques empêchent l'attaquant de savoir s'il a deviné un login valide.#
+
+== Sur le Lab 3 (Session)
+
+=== Screenshot de réussite du lab 3 !
+image::Lab3-screen.png[Preuve Lab 3]
+
+=== Q5. Quelle était la structure exacte du cookie décodé ?
+
+*Réponse de Philopatir Wardi Romani :*
+_En analysant le cookie de l'utilisateur wiener via le décodeur Base64, nous avons identifié la structure suivante : nom_utilisateur:MD5(mot_de_passe). Par exemple pour Carlos, cela donnait une chaîne du type : carlos:d8578edf8458ce06fbc5bb76a58c5ca4._
+
+[green]#**Correction / Commentaire :**#
+[green]#Analyse correcte et exemple pertinent.#
+
+=== Q6. Pourquoi l’utilisation de l’algorithme MD5 pour hasher le mot de passe dans le cookie est-elle une faiblesse critique aujourd’hui ?
+
+*Réponse de Philopatir Wardi Romani :*
+_L'algorithme MD5 est considéré comme **obsolète** et non sécurisé car :_
+
+_1.  Il est très rapide à calculer, ce qui permet aux attaquants de tester des milliards de combinaisons par seconde (Brute-force)._
+
+_2.  Il existe des **Rainbow Tables** immenses sur internet qui permettent de retrouver le mot de passe original à partir d'un hash MD5 en quelques millisecondes._
+
+[green]#**Correction / Commentaire :**#
+[green]#Très bien résumé. La rapidité de calcul de MD5 est sa plus grande faiblesse dans ce contexte.#
+
+=== Q7. Si le développeur avait utilisé un "Grain de sel" (Salt) aléatoire inconnu de l’attaquant, l’attaque aurait-elle fonctionné ?
+
+*Réponse de l'étudiant :*
+_Non, l'attaque n'aurait probablement pas fonctionné (ou aurait été beaucoup plus complexe). Si le développeur avait ajouté un **Salt** avant de hasher le mot de passe, nous n'aurions pas pu générer le bon hash dans Burp Intruder. Même en connaissant le mot de passe, sans connaître le "Salt", le hash final aurait été différent de celui attendu par le serveur._
+
+[green]#**Correction / Commentaire :**#
+[green]#Réponse parfaite. Sans le sel (secret serveur), il est impossible pour l'attaquant de reproduire le processus de hachage pour forger le cookie.#

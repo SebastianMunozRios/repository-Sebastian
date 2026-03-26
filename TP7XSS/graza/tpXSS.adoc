@@ -1,0 +1,95 @@
+= Compte-rendu TP.XSS
+
+Gedeon Razafimanjato
+:toc: left
+=== Challenge 1
+:imagesdir: images
+
+image::gg.png[]
+
+1.1 Efficacité contre Burp Suite
+Le niveau 1 est inefficace face à un proxy d'interception. Puisque les contrôles ne sont présents que dans le navigateur (côté client), Burp Suite permet de capturer la requête après ces vérifications. L'attaquant peut alors injecter des données malveillantes directement dans le corps de la requête HTTP, que le serveur acceptera sans broncher.
+
+1.2 Injection via le formulaire
+Directement, c'est souvent bloqué. Le champ de saisie utilise généralement des restrictions HTML5 (type, pattern) ou du code JavaScript qui empêche la validation du formulaire si des caractères interdits sont détectés. C'est précisément pour cela que l'on utilise un outil tiers pour "forcer" l'envoi.
+
+1.3 Dispositifs de sécurité identifiés
+Dans le code source, on constate une absence totale de filtrage serveur. Les données provenant de l'utilisateur sont passées directement à des fonctions système (comme shell_exec) et réaffichées sans traitement préalable, ce qui crée une porte ouverte aux injections.
+
+1.4 Signes distinctifs d'une attaque XSS
+Pour briser la structure d'une page, les pirates utilisent :
+
+<> / : Pour injecter des balises de script.
+
+' " : Pour s'extraire d'une valeur d'attribut existante.
+
+() : Pour déclencher des fonctions (ex: prompt()).
+
+{} : Pour définir des blocs de code logique.
+
+
+
+II. Analyse du Niveau de Sécurité 5 (Élevé)
+2.1 Résistance aux outils d'interception
+Le niveau 5 neutralise l'attaque, même via Burp Suite. Peu importe comment la donnée arrive au serveur, celui-ci traite l'information de manière sécurisée avant toute utilisation. Le code injecté est traité comme du texte inerte et perd son pouvoir d'exécution.
+
+2.2 Variables clés de protection
+Le script s'appuie sur deux éléments majeurs :
+
+$lTargetHost : La variable qui stocke la saisie utilisateur une fois qu'elle a été "assainie".
+
+$lSecurityLevel : Le marqueur d'état qui active les protocoles de sécurité les plus rigoureux du fichier.
+
+2.3 Rôle de la ligne n°44 (Validation)
+Cette instruction agit comme un douanier. Elle compare la saisie à un modèle strict (souvent via une expression régulière). Si l'entrée ne ressemble pas exactement à un nom de domaine ou une IP, elle est rejetée instantanément, bloquant ainsi toute tentative d'injection de scripts ou de commandes.
+
+2.4 Mécanisme anti-injection de commandes
+La protection s'assure qu'aucun opérateur de chaînage n'est présent. Elle traque les symboles comme &&, |, ; ou backticks (`) qui permettraient de détourner la fonction initiale pour exécuter des programmes non autorisés sur le système d'exploitation du serveur.
+
+2.5 Neutralisation du XSS
+L'outil principal est la fonction htmlspecialchars(). Son rôle est de convertir les caractères spéciaux en "entités HTML". Par exemple, un < devient &lt;. Le navigateur affiche alors le symbole à l'écran mais ne le considère plus comme le début d'une balise de code.
+
+2.6 Isolation de la protection
+En modifiant dns-lookup.php pour ne laisser que htmlspecialchars(), on observe que même si une commande système pourrait passer (si le filtre de validation est désactivé), toute tentative d'afficher du contenu dynamique (XSS) est rendue inoffensive visuellement.
+
+2.7 Synthèse des barrières du Niveau 5
+La sécurité repose sur une stratégie de défense en profondeur :
+
+Filtrage à l'entrée : Rejet de tout ce qui ne correspond pas au format attendu.
+
+Échappement des commandes : Neutralisation des caractères de contrôle du terminal.
+
+Encodage à la sortie : Transformation du HTML pour empêcher l'exécution de scripts dans le navigateur.
+
+III. Focus sur le XSS Permanent et les Bonnes Pratiques
+3.1 Échec de l'attaque en sécurité maximale
+Le serveur refuse de stocker ou d'afficher du code actif. L'attaque échoue car le contenu malveillant est désarmé avant d'atteindre la base de données ou l'écran des autres utilisateurs.
+
+3.2 Limites de la validation seule
+Valider l'entrée ne suffit pas car :
+
+Des données légitimes peuvent être détournées selon le contexte d'affichage.
+
+Un contournement des filtres (obfuscation) est toujours théoriquement possible.
+
+La sécurité doit être appliquée au plus près de l'affichage (Sortie) pour être réellement efficace.
+
+3.3 Équivalents techniques dans d'autres environnements
+Chaque langage possède son propre bouclier :
+
+Java (JSTL) : Balise <c:out>.
+
+JS (DOM) : Utilisation de .textContent au lieu de .innerHTML.
+
+Python (Jinja2) : Auto-escaping ou filtre | e.
+
+C# (ASP.NET) : Méthode @ ou Html.Encode.
+
+3.4 Principes fondamentaux de défense
+Pour garantir une application saine, il faut :
+
+Toujours encoder la sortie : Transformer systématiquement les données avant affichage.
+
+Appliquer la "Liste Blanche" : N'autoriser que les caractères connus comme sûrs.
+
+Défiance par défaut : Considérer toute donnée provenant de l'extérieur comme potentiellement hostile.

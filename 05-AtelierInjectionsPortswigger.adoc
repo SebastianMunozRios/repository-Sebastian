@@ -1,0 +1,149 @@
+= Sécurisation Web : Atelier Injections (SQL & XSS)
+:author: Timothée Robert
+:toc: left
+:toc-title: Sommaire
+:icons: font
+:source-highlighter: rouge
+:sectnums:
+:imagesdir: images
+
+== Introduction
+
+Après avoir manipulé les sessions, nous revenons aux fondamentaux de l'attaque Web avec deux des failles les plus critiques du classement OWASP :
+
+1.  **L'Injection SQL (SQLi) :** Manipuler la base de données.
+2.  **Le Cross-Site Scripting (XSS) :** Manipuler le navigateur de la victime.
+
+Pour ces ateliers, nous utiliserons la **Web Security Academy** de PortSwigger. Ces laboratoires sont plus modernes et réalistes que Mutillidae même si ils sont un peu plus difficiles. En revanche ils ne proposent pas l'accès au code source donc n'hésitez pas à retourner sur Mutillidae pour observer le CODE.
+
+Cette semaine nous revoyons les injections déjà abordées avec Mutillidae et la semaine prochaine nous attaquons les failles XSS.
+
+=== Consignes
+* Connectez-vous à votre compte PortSwigger.
+* Lancez **Burp Suite** et son navigateur intégré.
+* Pour chaque challenge, l'objectif est d'obtenir le bandeau vert **"Congratulations, you solved the lab!"**.
+* **Prenez une capture d'écran de chaque réussite pour votre compte-rendu**.
+
+<<<
+
+== Partie 1 : Injections SQL (SQLi)
+
+Dans cette partie, nous allons voir comment un attaquant peut parler directement à la base de données en contournant l'application.
+
+=== Lab 1 : Voir ce qu'on ne devrait pas voir
+**Titre :** _SQL injection retrieval of hidden data_
+
+**Lien :** https://portswigger.net/web-security/sql-injection/lab-retrieve-hidden-data
+
+**Contexte :**
+Ce site de e-commerce possède des filtres de catégories (ex: `/filter?category=Gifts`). Il n'affiche que les produits "publiés". Les produits non publiés sont cachés par une clause `WHERE released = 1`.
+
+**Objectif :**
+Injecter une condition logique pour afficher **tous** les produits (même ceux non publiés), quelle que soit la catégorie.
+
+[TIP]
+.Indice
+====
+En SQL, quelle condition est **toujours vraie** ? Comment lier cette condition à la requête existante avec un opérateur `OR` ?
+====
+
+=== Lab 2 : Contournement d'Authentification
+**Titre :** _SQL injection login bypass_
+
+**Lien :** https://portswigger.net/web-security/sql-injection/lab-login-bypass
+
+**Contexte :**
+Une page de login classique. Nous avons vu cette attaque sur Mutillidae. Le serveur vérifie le mot de passe dans la requête SQL.
+
+**Objectif :**
+Se connecter en tant qu'**administrator** sans connaître son mot de passe.
+
+[TIP]
+.Indice
+====
+Si vous connaissez le nom d'utilisateur (`administrator`), comment pouvez-vous dire à la base de données d'ignorer la vérification du mot de passe qui se trouve à la fin de la requête SQL ? Pensez aux commentaires SQL.
+====
+
+=== Lab 3 : Préparer l'extraction (UNION Attack 1)
+**Titre :** _SQL injection UNION attack, determining the number of columns_
+
+**Lien :** https://portswigger.net/web-security/sql-injection/union-attacks/lab-determine-number-of-columns
+
+**Contexte :**
+Pour voler des données d'une autre table (ex: la table `users`), on utilise souvent l'opérateur `UNION`.
+Cependant, pour que `UNION` fonctionne, la requête injectée doit avoir **exactement le même nombre de colonnes** que la requête originale.
+
+**Objectif :**
+Trouver combien de colonnes sont renvoyées par la requête de la page "Category".
+
+[TIP]
+.Indice
+====
+Utilisez la clause `ORDER BY X` (où X est un chiffre). Tant que la page s'affiche, la colonne X existe. Si vous obtenez une "Internal Server Error", c'est que vous avez dépassé le nombre de colonnes.
+====
+
+=== Lab 4 : Le Braquage de données (UNION Attack 2)
+**Titre :** _SQL injection UNION attack, retrieving data from other tables_
+
+**Lien :** https://portswigger.net/web-security/sql-injection/union-attacks/lab-retrieve-data-from-other-tables
+
+**Contexte :**
+Maintenant que vous savez comment structurer un `UNION`, nous allons voler la base de données.
+Le site contient une table nommée `users` avec les colonnes `username` et `password`.
+
+**Objectif :**
+
+1.  Utiliser une injection `UNION` pour afficher le contenu de la table `users` à la place des produits.
+2.  Récupérer le mot de passe de l'utilisateur `administrator`.
+3.  Vous connecter avec ce mot de passe pour valider le lab.
+
+=== Lab 5 : L'Injection en Aveugle (Blind SQLi)
+**Titre :** _Blind SQL injection with conditional responses_
+**Lien :** https://portswigger.net/web-security/sql-injection/blind/lab-conditional-responses
+
+**Niveau :** Avancé (Practitioner)
+
+**Contexte :**
+Jusqu'à présent, quand vous faisiez une injection, vous voyiez le résultat (le nom du produit, le mot de passe, ou une erreur).
+Dans une injection "Blind" (Aveugle), l'application ne renvoie **aucune donnée** de la base et **aucune erreur**.
+Elle réagit juste différemment (un tout petit détail change sur la page) selon que votre requête SQL est VRAIE ou FAUSSE.
+
+**Le Mécanisme :**
+L'application utilise un Cookie `TrackingId` pour vous dire "Welcome back".
+La requête ressemble à : `SELECT * FROM tracking WHERE id = 'VOTRE_COOKIE'`.
+* Si la requête renvoie un résultat -> Le message "Welcome back" s'affiche.
+* Si la requête ne renvoie rien -> Le message disparaît.
+
+**Objectif :**
+1.  Confirmer la vulnérabilité en faisant apparaître/disparaître le message "Welcome back" avec une condition logique (`AND 1=1` vs `AND 1=2`).
+2.  Deviner le mot de passe de `administrator` caractère par caractère (ou au moins trouver la longueur du mot de passe).
+
+[TIP]
+.La logique de l'attaque
+====
+Vous devez poser des questions binaires à la base de données :
+_"Est-ce que le mot de passe de l'admin commence par la lettre 'a' ?"_
+Payload : `' AND (SELECT SUBSTRING(password,1,1) FROM users WHERE username='administrator')='a`
+
+* Si "Welcome back" s'affiche : **OUI** (c'est un 'a').
+* Si "Welcome back" disparaît : **NON** (ce n'est pas un 'a', essayez 'b'...).
+
+_Note : Pour valider le labo rapidement sans tester tout l'alphabet, concentrez-vous sur la compréhension de la logique VRAI/FAUX._
+====
+
+== Questions de Synthèse (Compte-rendu)
+
+Répondez aux questions suivantes dans votre compte-rendu pour valider votre compréhension des concepts.
+
+=== Sur les Injections SQL (Labs 1 à 5)
+
+**Q1.** Dans le Lab 1, pourquoi l'ajout de `OR 1=1` permet-il d'afficher des données qui étaient censées être cachées ? Expliquez la logique booléenne.
+
+**Q2.** Dans le Lab 2, quel est le rôle précis des caractères `--` (ou `#` selon la base de données) à la fin de votre injection ? Pourquoi cela permet-il de se passer du mot de passe ?
+
+**Q3.** Dans le Lab 3 (UNION), pourquoi est-il **obligatoire** de connaître le nombre exact de colonnes avant de pouvoir extraire des données ? Que se passe-t-il si les deux requêtes n'ont pas la même structure ?
+
+**Q4.** Quelle est la meilleure méthode de protection (côté code PHP/Java/C#) pour empêcher totalement les injections SQL, rendant les caractères comme `'` ou `OR` inefficaces ?
+
+**Q5.**  Dans une injection SQL "Blind" (Aveugle), l'attaquant ne voit jamais les données s'afficher à l'écran.
+Comment fait-il alors pour voler un mot de passe entier ? Pourquoi cette technique est-elle beaucoup plus lente qu'une injection `UNION` classique ?

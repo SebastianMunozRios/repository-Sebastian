@@ -1,0 +1,87 @@
+= Compte-rendu de Lab : Sécurité Web & Authentification
+:author: Alex XU
+:imagesdir: ./imgaxu
+:icons: font
+:toc: left
+:toc-title: Sommaire
+:source-highlighter: rouge
+
+== 🛡️ Exercice 1 : Manipulation de Cookies
+_Cible : Contrôle d'accès via paramètre forgeable._
+
+image::Solution1.png[Solution1, width=600]
+image::Solution1.1.png[Solution1.1, width=600]
+
+[IMPORTANT]
+.Q1 : Pourquoi est-il dangereux de stocker `Admin=false` dans un cookie ?
+Même si le cookie n'est pas affiché sur la page web, il est stocké localement dans le navigateur. L'utilisateur en a le contrôle total via les **outils de développement** (F12). Il peut modifier la valeur en `true` pour usurper des privilèges.
+
+[green]#**Correction / Commentaire :**#
+[green]#Réponse parfaite. Vous avez bien identifié le risque fondamental : le stockage côté client est par définition non fiable.#
+
+[TIP]
+.Q2 : Quelle est la bonne méthode pour gérer les droits ?
+Il faut utiliser une **gestion côté serveur**. Au lieu de stocker le rôle dans le cookie, on y stocke uniquement un identifiant de session anonyme. Le serveur vérifie ensuite les droits correspondants dans sa propre **base de données** à chaque requête.
+
+[green]#**Correction / Commentaire :**#
+[green]#Exactement. C'est le principe de la session sécurisée (Stateful).#
+
+== 🔍 Exercice 2 : Énumération de Logins
+_Cible : Identification de comptes et Brute-force._
+
+image::Solution2.png[Solution2, width=600]
+image::Solution2.2.png[Solution2.2, width=600]
+
+=== Analyse de l'attaque Intruder
+
+[cols="1,3", options="header"]
+|===
+| Élément | Justification technique
+| **Login** | Repéré via la **Taille (Length)**. Le serveur répond `"Invalid username"` (15 car.) si le compte n'existe pas, mais `"Incorrect password"` (17 car.) si le compte est valide. Cette différence de 2 octets trahit la validité de l'utilisateur.
+| **Password** | Repéré via le **Code HTTP (302)**. Une tentative échouée renvoie un code 200 (reste sur la page), tandis qu'une réussite renvoie un code 302 (redirection vers le compte).
+|===
+
+[green]#**Correction / Commentaire :**#
+[green]#Excellent usage du tableau pour synthétiser l'analyse. L'explication sur la différence d'octets (Length) et le code de redirection (302) est techniquement irréprochable.#
+
+=== Bonnes Pratiques de Développement
+Pour empêcher cette énumération, le système doit être **uniforme** :
+
+* **Message unique :** Toujours afficher `"Identifiant ou mot de passe incorrect"`.
+* **Réponse identique :** Même taille de réponse et même code HTTP (200) dans tous les cas d'échec.
+* **Temps constant :** Le serveur doit mettre le même temps à répondre pour ne pas trahir une vérification réussie en base de données.
+
+[green]#**Correction / Commentaire :**#
+[green]#Très bien. Vous avez pensé à mentionner les attaques temporelles (Timing Attacks), ce qui est un point bonus très pertinent.#
+
+== 🔐 Exercice 3 : Analyse de Session
+_Cible : Décodage de hash et cassage de cookie persistant._
+
+image::Solution3.png[Solution3, width=600]
+image::Solution3.3.png[Solution3.3, width=600]
+
+[NOTE]
+.Q5 : Structure exacte du cookie décodé
+Le cookie est construit selon le schéma : `Base64( Utilisateur : MD5(Mot de passe) )`.
+
+=== Q6 : Faiblesses critiques du MD5
+L'algorithme MD5 est jugé obsolète pour plusieurs raisons :
+
+1. **Vitesse de calcul :** Les ordinateurs modernes testent des milliards de hashs par seconde (Brute-force ultra-rapide).
+2. **Rainbow Tables :** Il existe des bases de données géantes contenant les correspondances entre mots de passe connus et leurs hashs MD5.
+3. **Absence de Sel :** Sans "Salt", deux mots de passe identiques produisent le même hash, ce qui facilite l'analyse statistique.
+
+[green]#**Correction / Commentaire :**#
+[green]#Analyse complète et correcte.#
+
+=== Q7 : L'impact d'un "Grain de Sel" (Salt)
+*L'attaque aurait-elle fonctionné ?* **Non.**
+
+**Justification :**
+L'attaque repose sur la capacité de l'attaquant à **reproduire le calcul** du serveur. Si le serveur ajoute un Sel secret (ex: `MD5(password + "SECRET")`), l'attaquant ne connaît plus qu'une partie de l'équation. Sans ce Sel, impossible de générer un hash que le serveur acceptera, rendant les dictionnaires et les outils comme Intruder totalement inefficaces.
+
+[quote]
+Le Sel crée un manque d'information critique qui rend la création d'un cookie valide impossible pour un attaquant externe.
+
+[green]#**Correction / Commentaire :**#
+[green]#C'est une excellente conclusion. Vous avez parfaitement compris que la sécurité du sel repose sur le fait qu'il est une donnée secrète (côté serveur) manquante à l'attaquant.#

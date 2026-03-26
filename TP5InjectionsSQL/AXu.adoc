@@ -1,0 +1,107 @@
+= Rapport de TP : Vulnérabilités et Injections SQL (Alex Xu)
+:toc: left
+:toc-title: Sommaire
+:icons: font
+:source-highlighter: highlight.js
+:sectnums:
+:imagesdir: ./imgaxu
+
+image::Image_Lab1_TP5.png[Lab 1 Header, align=center]
+
+== Lab 1 : Voir ce qu’on ne devrait pas voir
+
+Dans la requête d'origine, l'utilisation du mot-clé `AND` impose une restriction stricte.
+
+[NOTE]
+====
+Pour afficher un produit, le système vérifie deux conditions : la catégorie demandée **ET** le statut de publication (`released = 1`).
+====
+
+En injectant `OR 1=1`, on modifie radicalement la logique de la base de données :
+
+* **Le mécanisme du OR :** En logique SQL, il suffit qu'une seule des deux conditions soit vraie pour que l'accès soit validé.
+* **L'affirmation 1=1 :** C'est une vérité universelle (toujours vraie). L'ordinateur valide donc l'affichage de tous les produits, même ceux non publiés.
+
+[green]#**Correction / Commentaire :**#
+[green]#**Excellent.** Vous avez parfaitement expliqué le concept de "Tautologie" (vérité universelle) qui court-circuite la logique restrictive du `AND`.On s'attend à ce que vous répondiez à la demande de définition d'une tautologie dorénavant#
+
+---
+
+image::Image_Lab2_TP5.png[Lab 2 Header, align=center]
+
+== Lab 2 : Contournement de l'authentification (Login Bypass)
+
+=== Rôle des caractères `--` ou `#`
+Ces caractères servent à transformer tout ce qui suit l'injection en **commentaire**.
+
+* **Ignorer la suite :** Pour la base de données, un commentaire est une note que l'ordinateur ne doit pas traiter.
+* **Effacement de la commande :** En plaçant ces symboles juste après le nom d'utilisateur, le reste de la requête SQL originale est "neutralisé".
+
+=== Pourquoi le mot de passe n'est plus requis ?
+1.  **Suppression de la vérification :** La partie `AND password = '...'` est mise en commentaire et devient invisible pour le moteur SQL.
+2.  **Validation automatique :** L'ordinateur ne lit plus que : `WHERE username = 'administrator'`.
+3.  **Résultat :** Comme l'utilisateur "administrator" existe et que la vérification du mot de passe a été "effacée", la session s'ouvre automatiquement.
+
+[green]#**Correction / Commentaire :**#
+[green]#**Parfait.** L'explication étape par étape (Suppression -> Validation -> Résultat) est très claire et techniquement juste.#
+
+---
+
+image::Image_Lab3_TP5.png[Lab 3 Header, align=center]
+
+== Lab 3 : Préparer l’extraction (UNION Attack 1)
+
+L'opérateur `UNION` permet de fusionner les résultats de deux requêtes distinctes en une seule liste.
+
+IMPORTANT: Pour que cette fusion réussisse, les deux requêtes doivent avoir le **même nombre exact de colonnes**.
+
+[TIP]
+.Analogie du tableau
+====
+Imaginez que la base de données crée un tableau : elle ne peut pas empiler une ligne de 3 colonnes sur une ligne de 2 colonnes. Les colonnes doivent être parfaitement alignées verticalement.
+====
+
+[green]#**Correction / Commentaire :**#
+[green]#**Remarquable.** Votre analogie du tableau qui ne peut pas "empiler" des lignes de tailles différentes est excellente pour visualiser le problème. C'est exactement ça.#
+
+* **Structure identique :** Si le site sélectionne 3 éléments (ID, Nom, Prix), l'injection `UNION SELECT` doit aussi fournir 3 éléments.
+* **Gestion des erreurs :** Si les structures diffèrent, la base de données renvoie une erreur système, rendant les données invisibles.
+* **La méthode NULL :** On utilise le mot-clé `NULL` (accepté par presque tous les types de colonnes) en en ajoutant un par un (`NULL`, puis `NULL, NULL`, etc.) jusqu'à ce que la page s'affiche normalement. C'est ainsi que l'on détermine le nombre de colonnes.
+
+---
+
+image::Image_Lab4_TP5.png[Lab 4 Header, align=center]
+
+== Lab 4 : Le Braquage de données (UNION Attack 2)
+
+La meilleure méthode pour bloquer ces attaques consiste à **séparer le "plan" (la structure) des "données" (l'entrée utilisateur)**.
+
+[IMPORTANT]
+====
+C'est la méthode de référence utilisée par les professionnels en PHP, Java ou C#.
+====
+
+1.  **Étape 1 :** On envoie le "plan" de la requête avec des points d'interrogation (ex: `WHERE username = ?`).
+2.  **Étape 2 :** On envoie les données séparément.
+
+**Pourquoi est-ce invulnérable ?**
+La base de données sait d'avance que les points d'interrogation ne sont que du texte. Même si un pirate saisit `' OR 1=1 --`, le système cherchera un utilisateur dont le nom est *littéralement* cette chaîne de caractères. Les symboles perdent tout pouvoir de commande.
+
+[green]#**Correction / Commentaire :**#
+[green]#**Réponse modèle.** Vous décrivez ici le fonctionnement des **Requêtes Préparées (Prepared Statements)**. L'explication sur la séparation Plan/Données est la clé de la compréhension.#
+
+---
+
+== Lab 5 : L’Injection en Aveugle (Blind SQLi)
+
+Dans une injection **Blind**, l'attaquant ne voit aucune donnée s'afficher directement.
+
+* **Extraction caractère par caractère :** L'attaquant utilise des tests logiques (Vrai ou Faux).
+* **Questions fermées :** Via une fonction comme `SUBSTRING`, il isole une lettre et demande : *"La première lettre est-elle 'a' ?"*.
+* **Observation des réactions :**
+** Si le serveur répond "Welcome back", la condition est **Vraie**.
+** Si le message disparaît, elle est **Fausse**.
+* **Inconvénient :** Cette technique est beaucoup plus lente qu'une injection UNION car elle nécessite des centaines de requêtes pour reconstruire un seul mot de passe.
+
+[green]#**Correction / Commentaire :**#
+[green]#**Très bien.** Vous avez parfaitement décrit une attaque **Boolean-Based Blind SQLi** (basée sur la présence ou l'absence d'un message). L'analyse de la lenteur est correcte.#

@@ -1,0 +1,65 @@
+= Compte Rendu : Atelier Injections Portswigger
+:author: Wardi Romani Philopatir
+:email: philowardiromani@gmail.com
+:revdate: {docdate}
+:toc: left
+:toc-title: Sommaire
+:sectnums:
+:imagesdir: imgphilwardiromani
+:icons: font
+:source-highlighter: rouge
+
+Compte rendu de Philopatir Wardi Romani SIO 1
+
+=== Screenshot de réussite du lab 1 !
+image::Lab1-screen.png[Preuve Lab 1]
+
+=== Screenshot de réussite du lab 2 !
+image::Lab2-screen.png[Preuve Lab 2]
+
+=== Screenshot de réussite du lab 3 !
+image::Lab3-screen.png[Preuve Lab 3]
+
+=== Screenshot de réussite du lab 4 !
+image::Lab4-screen.png[Preuve Lab 4]
+
+
+=== Q1. Dans le Lab 1, pourquoi l’ajout de OR 1=1 permet-il d’afficher des données qui étaient censées être cachées ? Expliquez la logique booléenne.
+
+*Réponse de Philopatir Wardi Romani :*
+_L'ajout de `' OR 1=1` modifie la clause `WHERE` de la requête SQL. En logique booléenne, l'opérateur **OR** rend la condition globale vraie si au moins l'un des termes est vrai. Comme `1=1` est toujours vrai , la base de données ignore les filtres de sécurité initiaux  et retourne tous les enregistrements de la table._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Excellente réponse.** Vous avez parfaitement expliqué le mécanisme de la tautologie (toujours vrai) qui court-circuite le filtre de sécurité original.#
+
+=== Q2. Dans le Lab 2, quel est le rôle précis des caractères -- (ou # selon la base de données) à la fin de votre injection ? Pourquoi cela permet-il de se passer du mot de passe ?
+
+*Réponse de Philopatir Wardi Romani :*
+_En SQL, `--` indique un **commentaire de fin de ligne**. Tout ce qui suit est ignoré. Dans un formulaire de login, cela permet d'isoler la vérification du mot de passe. La requête s'arrête juste après le nom d'utilisateur, ce qui force  le succès de l'authentification si le nom d'utilisateur existe._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Parfait.** L'explication technique sur le commentaire de fin de ligne est exacte. C'est ce qui neutralise la vérification du mot de passe située à la fin de la requête originale.#
+
+=== Q3. Dans le Lab 3 (UNION), pourquoi est-il obligatoire de connaître le nombre exact de colonnes avant de pouvoir extraire des données ? Que se passe-t-il si les deux requêtes n’ont pas la même structure ?
+
+*Réponse de Philopatir Wardi Romani :*
+_L'instruction `UNION` fusionne deux jeux de résultats. SQL impose que les deux requêtes aient le meme nombre de colonnes. Si on essaie de fusionner une table de 3 colonnes avec une injection de 2 colonnes, cela rèvele une erreur de structure et la page affiche Erreur 500._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Très bien.** Vous avez correctement identifié la contrainte structurelle de l'opérateur `UNION`. J'ajoute juste que les types de données (texte vs nombre) doivent aussi correspondre.#
+
+=== Q4. Quelle est la meilleure méthode de protection (côté code PHP/Java/C#) pour empêcher totalement les injections SQL, rendant les caractères comme ' ou OR inefficaces ?
+
+*Réponse de Philopatir Wardi Romani :*
+_La solution standard est l'utilisation de **Requêtes Paramétrés**. Au lieu d'injecter des variables PHP dans la chaîne SQL, on utilise des paramètres (`?`). Le driver envoie la commande et les données séparément. Ainsi, `' OR 1=1` est traitée comme une simple chaîne de caractères et n'a plus de pouvoir._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Réponse modèle.** Vous avez compris le cœur du problème : la séparation entre la commande (SQL) et la donnée (Input utilisateur). C'est la seule protection fiable.#
+
+=== Q5. Dans une injection SQL "Blind" (Aveugle), l’attaquant ne voit jamais les données s’afficher à l’écran. Comment fait-il alors pour voler un mot de passe entier ? Pourquoi cette technique est-elle beaucoup plus lente qu’une injection UNION classique ?
+
+*Réponse de Philopatir Wardi Romani :*
+_C'est une méthode par **tâtonnement**. L'attaquant n'a pas de retour direct. Il pose des questions de type : `IF (première_lettre = 'a') ALORS afficher_message`. Il doit tester chaque caractère du mot de passe avec chaque lettre de l'alphabet. C'est beaucoup plus lent qu'un `UNION` car cela demande des centaines de requêtes HTTP là où une seule suffisait auparavant._
+
+[green]#**Correction / Commentaire :**#
+[green]#**Remarquable.** Vous avez parfaitement résumé le concept d'inférence (tâtonnement) et expliqué clairement la raison de la lenteur (le nombre de requêtes nécessaires pour reconstruire l'information lettre par lettre).#
